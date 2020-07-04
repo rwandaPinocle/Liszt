@@ -8,6 +8,7 @@ Liszt is a terminal based personal organizer and knowledge base
     - Card/board/list deletion/creation
     - Card moves
     - Internal and external editor
+    - Requirements file
 
 
 ### Planned features
