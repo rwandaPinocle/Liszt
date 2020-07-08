@@ -3,7 +3,7 @@ from blessed import Terminal
 EXIT = 'exit'
 NO_EXIT = 'no_exit'
 
-COROUTINE_SLEEP = 0.01
+COROUTINE_SLEEP = 0.00001
 
 term = Terminal()
 
@@ -13,3 +13,5 @@ styleTxt = term.white
 styleFTitle = term.underline_black_on_blue
 styleUfTitle = term.underline_blue_on_black
 styleSelectTxt = term.black_on_green
+
+sidebarWidth = 20

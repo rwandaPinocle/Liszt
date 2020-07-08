@@ -4,10 +4,10 @@ import asyncio
 from consts import term, EXIT, COROUTINE_SLEEP
 
 
-class Focus:
+class Coordinator:
     '''
-    The Focus object tracks when screen object has the focus.
-    It captures keypresses and forwards them to the currently focused object.
+    The Coordinator object handles keypresses and
+    passes messages between actors.
     '''
     def __init__(self, term):
         self.currentObj = None

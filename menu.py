@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Callable
 import asyncio
 
 from blessed import Terminal
@@ -14,53 +14,53 @@ from consts import (
     COROUTINE_SLEEP,
     term)
 from dataElements import DataElement
-from focus import Focus
+from coordinator import Coordinator
 
 
 def viewIdxs(totalSize, showCount, idx):
     minIdx = min(totalSize - showCount - 1, idx - (showCount//2))
     minIdx = max(minIdx, 0)
 
-    maxIdx = minIdx + showCount
+    maxIdx = minIdx + showCount - 1
     return (minIdx, maxIdx)
 
 
 @dataclass
 class Menu:
     title: str
-    top: int
-    height: int
-    left: int
-    width: int
-    focus: Focus
+    top: Callable
+    height: Callable
+    left: Callable
+    width: Callable
+    coord: Coordinator
     items: List[DataElement] = field(default_factory=list)
     currentIdx: int = 0
     drawFlag: bool = False
 
     def hasFocus(self):
-        return self.focus.currentObj == self
+        return self.coord.currentObj == self
 
     def clear(self):
-        for row in range(self.height):
-            move = term.move(row + self.top, self.left)
-            style = styleFBg if self.hasFocus() else styleUfBg
+        for row in range(self.height()):
+            move = term.move(row + self.top(), self.left())
+            style = styleUfBg
 
-            space = style(' ' * self.width)
+            space = style(' ' * self.width())
             print(f'{move}{space}')
         return
 
     def makeTitleStr(self):
         style = styleFTitle if self.hasFocus() else styleUfTitle
-        move = term.move(self.top, self.left)
+        move = term.move(self.top(), self.left())
 
-        trimmedName = f'{self.title[:self.width]}'
-        alignedName = f'{trimmedName:^{self.width}}'
+        trimmedName = f'{self.title[:self.width()]}'
+        alignedName = f'{trimmedName:^{self.width()}}'
         title = f'{move}{style(alignedName)}'
         return title
 
     def makeItemStrs(self):
         totalSize = len(self.items)
-        showCount = self.height - 1
+        showCount = self.height() - 1
 
         idx = self.currentIdx
         minIdx, maxIdx = viewIdxs(totalSize, showCount, idx)
@@ -70,15 +70,15 @@ class Menu:
             isSelected = (item == self.items[self.currentIdx])
             style = styleSelectTxt if isSelected else styleTxt
 
-            padSize = 1
-            trimmedName = item.name[:self.width-padSize]
+            padSize = 2
+            trimmedName = item.name[:self.width()-padSize]
             padding = ' ' * padSize
-            plainText = f'{padding}{trimmedName:<{self.width}}'
+            plainText = f'{padding}{trimmedName:<{self.width()-padSize}}'
             styledText = style(plainText)
 
-            row = self.top + delta + 1  # + 1 because of title
-            move = term.move(row, self.left)
-            result += f'{move}{styledText}\n'
+            row = self.top() + delta + 1  # + 1 because of title
+            move = term.move(row, self.left())
+            result += f'{move}{styledText}'
         return result
 
     def draw(self):

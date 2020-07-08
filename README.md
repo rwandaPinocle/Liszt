@@ -1,14 +1,15 @@
 # Introduction
-Liszt is a terminal based personal organizer and knowledge base
+Liszt is a terminal-based personal organization tool centered around keeping lists.
 
 ### Immediate Todos
 
     - Card content display
-    - Write changes to Sqlite DB
     - Card/board/list deletion/creation
     - Card moves
-    - Internal and external editor
+    - Internal and external content editor
     - Requirements file
+    - Graceful exits
+    - Database adapter
 
 
 ### Planned features
