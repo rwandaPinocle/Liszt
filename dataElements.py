@@ -1,24 +1,27 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 
 
 @dataclass
 class DataElement:
-    key: int
+    _id: Any
     name: str
+    dateAdded: str
 
 
 @dataclass
 class Card(DataElement):
+    parentId: Any
     content: str = ''
+    dueDate: str = ''
+    userData: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class _List(DataElement):
+    parentId: Any
 
 
 @dataclass
 class Board(DataElement):
-    lists: List['CardList'] = field(default_factory=list)
-
-
-@dataclass
-class CardList(DataElement):
-    board: Board
-    cards: List[Card] = field(default_factory=list)
+    desc: str

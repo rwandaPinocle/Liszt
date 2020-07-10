@@ -1,5 +1,6 @@
 import sys
 import asyncio
+import signal
 
 from consts import term, EXIT, COROUTINE_SLEEP
 
@@ -12,6 +13,7 @@ class Coordinator:
     def __init__(self, term):
         self.currentObj = None
         self.keyObjMap = {}
+        signal.signal(signal.SIGWINCH, self.onResize)
 
     def setCurrent(self, current):
         self.currentObj = current
@@ -26,6 +28,11 @@ class Coordinator:
             return EXIT
         self.currentObj = self.keyObjMap.get(key, self.currentObj)
         self.currentObj.process(key)
+
+    def onResize(self, *args):
+        for key, obj in self.keyObjMap.items():
+            obj.draw()
+        return
 
     async def eventLoop(self):
         while True:
