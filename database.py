@@ -62,10 +62,17 @@ class Database:
         '''
         Executes a command on the datatree
         Commands are split into a context string and an action
-        Examples:
-            with (personal/to do/read book): new-card "clean sink"
-            with (personal/to do/read book): move-card (personal/done)
-            with (personal/to do/-): new-list "Ignore"
+        Supported:
+            with (board title/list title/card title): new-card (Card Title)
+            with (board title/list title/card title): new-list (List Title)
+            with (board title/list title/card title): new-board (Board Title)
+            with (board title/list title/card title): show-card
+            with (board title/list title/card title): show-list
+            with (board title/list title/card title): show-board
+            with (board title/list title/card title): show-boards
+            
+            # with (board title/list title/card title): move-card (List Title)
+            # with (personal/to do/-): new-list "Ignore"
         '''
         context, action = command.split(':')
         contextData = parseContext(context)       
