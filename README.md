@@ -1,15 +1,15 @@
 # Introduction
-Liszt is a terminal-based personal organization tool centered around keeping lists.
+Liszt is a personal organization tool centered around keeping lists.
+Automation and customization is available through a small scripting language.
 
 ### Immediate Todos
 
-    - Card content display
     - Card/board/list deletion/creation
     - Card moves
-    - Internal and external content editor
     - Requirements file
-    - Graceful exits
     - Database adapter
+    - Scripting engine
+    - GUI
 
 
 ### Planned features
@@ -17,18 +17,19 @@ Liszt is a terminal-based personal organization tool centered around keeping lis
     - Full text search
     - Vimium style navigation
     - Remote sync
-    - Scripting engine ala Trello butler
     - Card due dates
     - Scheduled actions
-    - Linking cards
     - Export to csv, json, html, rst, Markdown
     - Import from Trello
     - Installers for Linux, Windows, Mac
     - Hidable help bar
+    - Card content display
+    - Internal and external content editor
 
 
 ### "If I feel like it" features
 
     - Calendar integration
     - Calendar view for due dates
+    - Linking cards
 
