@@ -4,6 +4,10 @@ import sqlite3
 import os
 # TODO: Add support for letter hash ids
 
+S_QUOTE = "'"
+D_QUOTE = '"'
+
+
 class Database:
     def __init__(self, filename='data.db'):
         self.filename = filename
@@ -23,6 +27,7 @@ class Database:
 
             'show-list': self.showList,
             'show-board': self.showBoard,
+            'show-boards': self.showBoards,
 
             'move-card': '',
             'move-list': '',
@@ -89,54 +94,31 @@ class Database:
         '''
         current-board
         '''
-        sql = '''
-            SELECT title
-            FROM boards
-            ORDER BY idx ASC
-            '''
+        sql = 'SELECT title FROM boards ORDER BY idx ASC'
         result = list(self.db.execute(sql))
         boardName = result[self.boardIdx][0]
         return boardName
 
-    def currentBoardId(self, command):
+    def getCurrentBoardId(self):
         '''
         current-board-id
         '''
-        sql = '''
-            SELECT ROWID
-            FROM boards
-            ORDER BY idx ASC
-            '''
-        result = list(self.db.execute(sql))
-        boardName = result[self.boardIdx][0]
+        sql = 'SELECT ROWID FROM boards ORDER BY idx ASC'
+        boards = list(self.db.execute(sql))
+        boardName = boards[self.boardIdx][0]
         return boardName
 
-    def addCard(self, command):
-        '''
-        add-card "card title" to "list title"
-        add-card 111 to 142
-        add-card afs to sfj
-        '''
-        pat = r'add-card (".*"|.*) to (".*"|.*)'
-        match = re.match(pat, command)
-        cardTitle = match.group(1)
-        listStr = match.group(2)
-
-        if '"' in listStr:
-            print(1)
-            listTitle = listStr.strip('"')
-            print('cardTitle', cardTitle)
-            print('listTitle', listTitle)
+    def getListId(self, listStr):
+        if D_QUOTE in listStr:
+            listTitle = listStr.strip(D_QUOTE)
             sql = f'''
                 SELECT ROWID
                 FROM lists
                 WHERE title='{listTitle}'
-                AND board={self.currentBoardId('')}
+                AND board={self.getCurrentBoardId()}
             '''
-            print(sql)
             listId = self.db.execute(sql).fetchone()[0]
         elif listStr.isdigit():
-            print(2)
             sql = f'''
                 SELECT ROWID
                 FROM lists
@@ -144,66 +126,100 @@ class Database:
             listId = self.db.execute(sql).fetchone()[0]
         else:
             raise NotImplementedError('Alphabetical ids not supported yet')
+        return listId
 
-        print(3)
-        sql = f'''
-            SELECT MAX(idx)
-            FROM cards
-            WHERE list='{listId}'
+    def getBoardId(self, boardStr):
+        if D_QUOTE in boardStr:
+            boardTitle = boardStr.strip(D_QUOTE)
+            sql = f'''
+                SELECT ROWID
+                FROM boards
+                WHERE title='{boardTitle}'
             '''
+            boardId = self.db.execute(sql).fetchone()[0]
+        elif boardStr.isdigit():
+            sql = f'''
+                SELECT ROWID
+                FROM board
+                WHERE ROWID={boardStr}'''
+            boardId = self.db.execute(sql).fetchone()[0]
+        else:
+            raise NotImplementedError('Alphabetical ids not supported yet')
+        return boardId
+
+    def getMaxIdx(self, table, field='', fieldVal=''):
+        if field and fieldVal:
+            sql = f'''
+                SELECT MAX(idx)
+                FROM {table}
+                WHERE {field}={fieldVal}
+                '''
+        else:
+            sql = f'SELECT MAX(idx) FROM {table}'
         maxIdx = self.db.execute(sql).fetchone()[0]
+
         if maxIdx is None:
             maxIdx = -1
         newIdx = maxIdx + 1
+        return newIdx
 
-        print(4)
+    def addCard(self, command):
+        '''
+        add-card "card title" to "list title"
+        add-card 111 to 142
+        add-card afs to sfj
+        '''
+        # Get card title and list title
+        pat = r'add-card (".*"|.*) to (".*"|.*)'
+        match = re.match(pat, command)
+        cardTitle = match.group(1)
+        listStr = match.group(2)
+
+        # Get new index
+        listId = self.getListId(listStr)
+        newIdx = self.getMaxIdx('cards', 'list', listId)
+
+        # Insert list into table
         values = (cardTitle, newIdx, -1, listId)
-        sql = f'INSERT INTO cards VALUES {values}'
+        sql = f'INSERT INTO cards(title, idx, dueDate, list) VALUES {values}'
         self.db.execute(sql)
-        self.db.commit()
         return
 
     def addList(self, command):
         '''
         add-list "List title"
         '''
+        # Parse command string
         pat = r'add-list (".*")'
         match = re.match(pat, command)
         newListTitle = match.group(1).strip('"')
 
-        sql = "SELECT ROWID FROM boards"
-        boardId = list(self.db.execute(sql))[self.boardIdx][0]
+        # Get new index
+        boardId = self.getCurrentBoardId()
+        newIdx = self.getMaxIdx('lists', 'name', boardId)
 
-        sql = f"SELECT MAX(idx) FROM lists WHERE name='{boardId}'"
-        maxIdx = self.db.execute(sql).fetchone()[0]
-        if maxIdx is None:
-            maxIdx = -1
-        newIdx = maxIdx + 1
-
+        # Insert list into table
         values = (newListTitle, newIdx, boardId)
         sql = f'INSERT INTO lists(title, idx, board) VALUES {values}'
         self.db.execute(sql)
-        self.commit()
         return
 
     def addBoard(self, command):
         '''
         add-board "Board title"
         '''
+        # Parse command string
         pat = r'add-board (".*")'
         match = re.match(pat, command)
         newBoardTitle = match.group(1).strip('"')
 
-        sql = 'SELECT MAX(index) FROM boards'
-        maxIdx = self.db.execute(sql).fetchone()[0]
-        if maxIdx is None:
-            maxIdx = -1
-        newIdx = maxIdx + 1
+        # Get new index
+        newIdx = self.getMaxIdx('boards')
 
+        # Insert board into table
         values = (newBoardTitle, newIdx)
         sql = f'INSERT INTO boards(title, idx) VALUES {values}'
         self.db.execute(sql)
-        self.commit()
         return
 
     def showList(self, command):
@@ -213,24 +229,20 @@ class Database:
         '''
         pat = r'show-list ("?.*"?)'
         match = re.match(pat, command)
+
+        # Get list id
         listStr = match.group(1)
+        listId = self.getListId(listStr)
 
-        if '"' in listStr:
-            listTitle = listStr.strip('"')
-            sql = f"SELECT ROWID FROM lists WHERE title='{listTitle}'"
-        elif listStr.isdigit():
-            sql = f"SELECT ROWID FROM lists WHERE ROWID={listStr}"
-        else:
-            raise NotImplementedError('Alphabetical ids not supported yet')
-
-        listId = self.db.execute(sql).fetchone()[0]
-
+        # Get cards in the list
         sql = f'''
             SELECT ROWID, title, dueDate
             FROM cards
             WHERE list={listId}
             ORDER BY idx ASC'''
         cards = self.db.execute(sql)
+
+        # Show results
         result = 'Id\tDue\tTitle\n'
         for card in cards:
             result += f'{card[0]}\t{card[2]}\t{card[1]}\n'
@@ -243,28 +255,15 @@ class Database:
         pat = r'show-board ("?.*"?)'
         match = re.match(pat, command)
 
+        # Get the board id
         if match is None:
-            sql = '''
-                SELECT ROWID
-                FROM boards
-                ORDER BY idx ASC'''
+            sql = 'SELECT ROWID FROM boards ORDER BY idx ASC'
             boardId = list(self.db.execute(sql))[self.boardIdx][0]
-
-        elif '"' in match.group(1):
-            boardStr = match.group(1)
-            boardTitle = boardStr.strip('"')
-            sql = f"SELECT ROWID FROM boards WHERE title='{boardTitle}'"
-
-        elif match.group(1).isdigit():
-            boardStr = match.group(1)
-            boardTitle = boardStr.strip('"')
-            sql = f"SELECT ROWID FROM boards WHERE ROWID='{boardTitle}'"
-
         else:
-            raise NotImplementedError('Alphabetical ids not supported yet')
+            boardStr = match.group(1)
+            boardId = self.getBoardId(boardStr)
 
-        boardId = self.db.execute(sql).fetchone()[0]
-
+        # Get the lists in that board
         sql = f'''
             SELECT ROWID, title, idx
             FROM lists
@@ -272,9 +271,37 @@ class Database:
             ORDER BY idx ASC
             '''
         lists = self.db.execute(sql)
+
+        # Show the results
         result = 'Id\tTitle\tCards\n'
         for _list in lists:
             sql = f"SELECT ROWID FROM cards WHERE list='{_list[0]}'"
             cardCount = len(list(self.db.execute(sql)))
             result += f'{_list[0]}\t{_list[1]}\t{cardCount}\n'
         return result
+
+    def showBoards(self, command):
+        '''
+        show-boards
+        '''
+        sql = '''
+            SELECT idx, ROWID, title
+            FROM boards
+            ORDER BY idx ASC
+        '''
+        boards = list(self.db.execute(sql))
+
+        result = 'Index\tId\tTitle\n'
+        for board in boards:
+            result += f'{board[0]}\t{board[1]}\t{board[2]}\n'
+        return result
+
+    def moveCard(self, command):
+        '''
+        move-card "card title" to "board title"
+        move-card "card title" to "list title" in "board title"
+        move-card 123 to 132
+        move-card 123 to 132 in 321
+        '''
+        
+        return
