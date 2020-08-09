@@ -20,22 +20,27 @@ class Database:
         self.boardIdx = 0
 
         self.actions = {
-            'current-board': self.currentBoard,
-            'add-card': self.addCard,
-            'add-list': self.addList,
-            'add-board': self.addBoard,
+            'where': self.where,
+            'goto': self.goto,
 
-            'show-list': self.showList,
-            'show-board': self.showBoard,
-            'show-boards': self.showBoards,
+            'add card': self.addCard,
+            'add list': self.addList,
+            'add board': self.addBoard,
 
-            'move-card': '',
-            'move-list': '',
-            'move-board': '',
+            'show cards': self.showCards,
+            'show lists': self.showLists,
+            'show boards': self.showBoards,
 
-            'del-card': '',
-            'del-list': '',
-            'del-board': '',
+            'move card': self.moveCard,
+            'move list': self.moveList,
+
+            #'shift card': '',
+            #'shift list': '',
+            #'shift board': '',
+
+            'delete card': self.delCard,
+            'delete list': self.delList,
+            'delete board': self.delBoard,
         }
         return
 
@@ -66,38 +71,41 @@ class Database:
         self.db.commit()
         return
 
-    def runCommand(self, command):
+    def runCommand(self, cmd):
         '''
         Executes a command on the datatree
-        Commands are split into a context string and an action
-        Supported:
-            current-board
-            add-card "Card Title" to board
-            add-list "List Title"
-            add-board "Board Title"
-            show-list "List title"
-            show-board
-            show-boards
         '''
-        action = command.split()[0]
-
-        # Get correct action
-        action.strip()
-        op = self.actions[action.split()[0]]
+        items = self.actions.items()
+        op = next(func for verb, func in items if cmd.startswith(verb))
 
         # Run command
-        result = op(command)
+        result = op(cmd)
         self.db.commit()
         return result
 
-    def currentBoard(self, command):
+    def where(self, command):
         '''
-        current-board
+        where
         '''
         sql = 'SELECT title FROM boards ORDER BY idx ASC'
         result = list(self.db.execute(sql))
         boardName = result[self.boardIdx][0]
         return boardName
+
+    def goto(self, command):
+        '''
+        goto 123
+        goto "board name"
+        '''
+        argPat = r'goto (?P<boardStr>".+"|\d+)'
+        match = re.match(argPat, command)
+        boardId = self.getBoardId(match.group('boardStr'))
+        sql = f'''
+            SELECT idx, title FROM boards WHERE ROWID = {boardId}
+        '''
+        idx, title = self.db.execute(sql).fetchone()
+        self.boardIdx = idx
+        return f'Current board: {title}'
 
     def getCurrentBoardId(self):
         '''
@@ -108,14 +116,17 @@ class Database:
         boardName = boards[self.boardIdx][0]
         return boardName
 
-    def getListId(self, listStr):
+    def getListId(self, listStr, boardId=-1):
+        if boardId == -1:
+            boardId = self.getCurrentBoardId()
+
         if D_QUOTE in listStr:
             listTitle = listStr.strip(D_QUOTE)
             sql = f'''
                 SELECT ROWID
                 FROM lists
                 WHERE title='{listTitle}'
-                AND board={self.getCurrentBoardId()}
+                AND board={boardId}
             '''
             listId = self.db.execute(sql).fetchone()[0]
         elif listStr.isdigit():
@@ -166,11 +177,9 @@ class Database:
     def addCard(self, command):
         '''
         add-card "card title" to "list title"
-        add-card 111 to 142
-        add-card afs to sfj
         '''
         # Get card title and list title
-        pat = r'add-card (".*"|.*) to (".*"|.*)'
+        pat = r'add-card "(.*)" to (".*"|.*)'
         match = re.match(pat, command)
         cardTitle = match.group(1)
         listStr = match.group(2)
@@ -190,9 +199,9 @@ class Database:
         add-list "List title"
         '''
         # Parse command string
-        pat = r'add-list (".*")'
+        pat = r'add-list "(.*)"'
         match = re.match(pat, command)
-        newListTitle = match.group(1).strip('"')
+        newListTitle = match.group(1)
 
         # Get new index
         boardId = self.getCurrentBoardId()
@@ -209,7 +218,7 @@ class Database:
         add-board "Board title"
         '''
         # Parse command string
-        pat = r'add-board (".*")'
+        pat = r'add-board "(.*)"'
         match = re.match(pat, command)
         newBoardTitle = match.group(1).strip('"')
 
@@ -222,12 +231,12 @@ class Database:
         self.db.execute(sql)
         return
 
-    def showList(self, command):
+    def showCards(self, command):
         '''
-        show-list "List title"
-        show-list 123
+        show-cards "List title"
+        show-cards 123
         '''
-        pat = r'show-list ("?.*"?)'
+        pat = r'show-cards (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get list id
@@ -248,11 +257,13 @@ class Database:
             result += f'{card[0]}\t{card[2]}\t{card[1]}\n'
         return result
 
-    def showBoard(self, command):
+    def showLists(self, command):
         '''
-        show-board
+        show-lists
+        show-lists "board name"
+        show-lists 123
         '''
-        pat = r'show-board ("?.*"?)'
+        pat = r'show-lists (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get the board id
@@ -298,10 +309,87 @@ class Database:
 
     def moveCard(self, command):
         '''
-        move-card "card title" to "board title"
-        move-card "card title" to "list title" in "board title"
+        move-card 123 to "list title"
+        move-card 123 to "list title" in "board title"
         move-card 123 to 132
-        move-card 123 to 132 in 321
         '''
-        
+        argPat = r'move-card (?P<cardStr>".+"|\d+)'
+        argPat += r' to (?P<listDstStr>".+"|\d+)'
+        argPat += r'(?: in (?P<boardStr>".+"|\d+))?'
+        match = re.match(argPat, command)
+
+        cardId = match.group('cardStr')
+
+        if match.group('boardStr'):
+            boardId = self.getBoardId(match.group('boardStr'))
+        else:
+            boardId = self.getCurrentBoardId()
+
+        listDstId = self.getListId(match.group('listDstStr'), boardId)
+        sql = f'''
+            UPDATE cards
+            SET list = {listDstId}
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def moveList(self, command):
+        '''
+        move-list "list title" to "board title"
+        move-list 123 to 123
+        '''
+        argPat = r'move-list (?P<listStr>".+"|\d+) to (?P<boardStr>".+"|\d+)'
+        match = re.match(argPat, command)
+
+        listId = self.getListId(match.group('listStr'))
+        boardId = self.getBoardId(match.group('boardStr'))
+        sql = f'''
+            UPDATE lists
+            SET board = {boardId}
+            WHERE ROWID = {listId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def delCard(self, command):
+        '''
+        delete card 123
+        '''
+        argPat = r'delete card (?P<cardId>\d+)'
+        match = re.match(argPat, command)
+        cardId = match.group('cardId')
+        sql = f'''
+            DELETE FROM cards
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def delList(self, command):
+        '''
+        delete list 123
+        '''
+        argPat = r'delete list (?P<listId>\d+)'
+        match = re.match(argPat, command)
+        listId = match.group('listId')
+        sql = f'''
+            DELETE FROM lists
+            WHERE ROWID = {listId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def delBoard(self, command):
+        '''
+        delete board 123
+        '''
+        argPat = r'delete board (?P<boardId>\d+)'
+        match = re.match(argPat, command)
+        boardId = match.group('boardId')
+        sql = f'''
+            DELETE FROM boards
+            WHERE ROWID = {boardId}
+        '''
+        self.db.execute(sql)
         return
