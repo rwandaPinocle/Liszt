@@ -151,7 +151,7 @@ class Database:
         elif boardStr.isdigit():
             sql = f'''
                 SELECT ROWID
-                FROM board
+                FROM boards
                 WHERE ROWID={boardStr}'''
             boardId = self.db.execute(sql).fetchone()[0]
         else:
@@ -233,10 +233,10 @@ class Database:
 
     def showCards(self, command):
         '''
-        show-cards "List title"
-        show-cards 123
+        show cards "List title"
+        show cards 123
         '''
-        pat = r'show-cards (".*"|\d*)'
+        pat = r'show cards (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get list id
@@ -252,18 +252,18 @@ class Database:
         cards = self.db.execute(sql)
 
         # Show results
-        result = 'Id\tDue\tTitle\n'
+        result = 'id\tdue\ttitle\n'
         for card in cards:
             result += f'{card[0]}\t{card[2]}\t{card[1]}\n'
         return result
 
     def showLists(self, command):
         '''
-        show-lists
-        show-lists "board name"
-        show-lists 123
+        show lists
+        show lists "board name"
+        show lists 123
         '''
-        pat = r'show-lists (".*"|\d*)'
+        pat = r'show lists (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get the board id
@@ -284,7 +284,7 @@ class Database:
         lists = self.db.execute(sql)
 
         # Show the results
-        result = 'Id\tTitle\tCards\n'
+        result = 'id\ttitle\tcards\n'
         for _list in lists:
             sql = f"SELECT ROWID FROM cards WHERE list='{_list[0]}'"
             cardCount = len(list(self.db.execute(sql)))
@@ -296,15 +296,15 @@ class Database:
         show-boards
         '''
         sql = '''
-            SELECT idx, ROWID, title
+            SELECT ROWID, title
             FROM boards
             ORDER BY idx ASC
         '''
         boards = list(self.db.execute(sql))
 
-        result = 'Index\tId\tTitle\n'
+        result = 'id\ttitle\n'
         for board in boards:
-            result += f'{board[0]}\t{board[1]}\t{board[2]}\n'
+            result += f'{board[0]}\t{board[1]}\n'
         return result
 
     def moveCard(self, command):
