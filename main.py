@@ -113,7 +113,7 @@ class CardModel(QStandardItemModel):
     def showListCards(self, listId):
         self.listId = listId
         self.clear()
-        for card in getCards(self.db, listId):
+        for card in reversed(getCards(self.db, listId)):
             self.appendRow(card)
         return
 
@@ -155,13 +155,7 @@ def getCards(db, listid):
     return cards
 
 
-'''
-Upon hitting return, add the card to the db and refresh the display
-'''
-
-
 class NewCardTextBox(QLineEdit):
-    # TODO: Connect this signal
     newCardRequested = Signal(str, int)
     getCurrentList = Signal()
     cardAdded = Signal(int)
@@ -170,11 +164,10 @@ class NewCardTextBox(QLineEdit):
         QLineEdit.__init__(self)
         self.returnPressed.connect(self.handleReturn)
         self.setStyleSheet('''
-                QLineEdit {
-                    background-color: #2a2a2a;
-                    color: #cccccc;
-                };
-                ''')
+            QLineEdit {
+                background-color: #2a2a2a;
+                color: #cccccc;
+            }; ''')
         return
 
     def handleReturn(self):
@@ -195,8 +188,8 @@ class MainWidget(QWidget):
         self.newCardTextBox = NewCardTextBox()
 
         centralLayout = QVBoxLayout()
-        centralLayout.addWidget(self.cardView)
         centralLayout.addWidget(self.newCardTextBox)
+        centralLayout.addWidget(self.cardView)
 
         mainLayout = QHBoxLayout()
         mainLayout.addWidget(self.sidebarView)
