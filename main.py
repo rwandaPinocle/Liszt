@@ -101,19 +101,25 @@ class CardView(QListView):
                 ''')
         return
 
+
 class CardModel(QStandardItemModel):
     def __init__(self, db):
         QStandardItemModel.__init__(self, parent=None)
         self.db = db
+        self.listId = -1
         return
 
     @Slot(int)
     def showListCards(self, listId):
-        print('recieved showListCards:', listId)
+        self.listId = listId
         self.clear()
         for card in getCards(self.db, listId):
             self.appendRow(card)
         return
+
+    @Slot()
+    def currentList(self):
+        return self.listId
 
 
 def getBoards(db):
@@ -147,6 +153,8 @@ def getCards(db, listid):
             card = Card(row['title'], row['id'])
             cards.append(card)
     return cards
+
+
 '''
 Upon hitting return, add the card to the db and refresh the display
 '''
@@ -154,17 +162,27 @@ Upon hitting return, add the card to the db and refresh the display
 
 class NewCardTextBox(QLineEdit):
     # TODO: Connect this signal
-    newCard = Signal(str)
+    newCardRequested = Signal(str, int)
+    getCurrentList = Signal()
+    cardAdded = Signal(int)
 
     def __init__(self):
         QLineEdit.__init__(self)
         self.returnPressed.connect(self.handleReturn)
+        self.setStyleSheet('''
+                QLineEdit {
+                    background-color: #2a2a2a;
+                    color: #cccccc;
+                };
+                ''')
         return
 
     def handleReturn(self):
         text = self.text()
-        self.sendNewCardText.emit(text)
-        self.setText("Enter new card name here...")
+        listid = self.getCurrentList.emit()
+        self.newCardRequested.emit(text, listid)
+        self.cardAdded.emit(listid)
+        self.setText('')
         return
 
 
@@ -174,15 +192,15 @@ class MainWidget(QWidget):
         self.db = db
         self.cardView = CardView()
         self.sidebarView = SidebarView()
-        self.newCardTextBox = QLineEdit()
+        self.newCardTextBox = NewCardTextBox()
 
-        sidebarLayout = QVBoxLayout()
-        sidebarLayout.addWidget(self.sidebarView)
-        sidebarLayout.addWidget(self.newCardTextBox)
+        centralLayout = QVBoxLayout()
+        centralLayout.addWidget(self.cardView)
+        centralLayout.addWidget(self.newCardTextBox)
 
         mainLayout = QHBoxLayout()
         mainLayout.addWidget(self.sidebarView)
-        mainLayout.addWidget(self.cardView)
+        mainLayout.addLayout(centralLayout)
         self.setLayout(mainLayout)
 
         self.setupSidebar()
@@ -191,6 +209,9 @@ class MainWidget(QWidget):
         return
 
     def setupNewCardTextBox(self):
+        self.newCardTextBox.getCurrentList.connect(self.cardModel.currentList)
+        self.newCardTextBox.newCardRequested.connect(self.makeNewCard)
+        self.newCardTextBox.cardAdded.connect(self.cardModel.showListCards)
         return
 
     def setupSidebar(self):
@@ -208,6 +229,11 @@ class MainWidget(QWidget):
         self.cardModel = CardModel(self.db)
         self.cardView.setModel(self.cardModel)
         self.sidebarView.listClicked.connect(self.cardModel.showListCards)
+        return
+
+    @Slot(str, int)
+    def makeNewCard(self, text, listid):
+        self.db.runCommand(f'add card "{text}" to {listid}')
         return
 
 

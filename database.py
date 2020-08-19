@@ -176,10 +176,10 @@ class Database:
 
     def addCard(self, command):
         '''
-        add-card "card title" to "list title"
+        add card "card title" to "list title"
         '''
         # Get card title and list title
-        pat = r'add-card "(.*)" to (".*"|.*)'
+        pat = r'add card "(.*)" to (".*"|.*)'
         match = re.match(pat, command)
         cardTitle = match.group(1)
         listStr = match.group(2)
@@ -196,10 +196,10 @@ class Database:
 
     def addList(self, command):
         '''
-        add-list "List title"
+        add list "List title"
         '''
         # Parse command string
-        pat = r'add-list "(.*)"'
+        pat = r'add list "(.*)"'
         match = re.match(pat, command)
         newListTitle = match.group(1)
 
@@ -215,10 +215,10 @@ class Database:
 
     def addBoard(self, command):
         '''
-        add-board "Board title"
+        add board "Board title"
         '''
         # Parse command string
-        pat = r'add-board "(.*)"'
+        pat = r'add board "(.*)"'
         match = re.match(pat, command)
         newBoardTitle = match.group(1).strip('"')
 
