@@ -16,6 +16,7 @@ from PySide2.QtWidgets import (
     QTreeView,
     QListView,
     QLineEdit,
+    QAbstractItemView,
 )
 from PySide2.QtCore import (
     QFile,
@@ -99,6 +100,7 @@ class CardView(QListView):
                     color: #cccccc;
                 };
                 ''')
+        self.setDragDropMode(QAbstractItemView.DragDrop)
         return
 
 
