@@ -309,11 +309,11 @@ class Database:
 
     def moveCard(self, command):
         '''
-        move-card 123 to "list title"
-        move-card 123 to "list title" in "board title"
-        move-card 123 to 132
+        move card 123 to "list title"
+        move card 123 to "list title" in "board title"
+        move card 123 to 132
         '''
-        argPat = r'move-card (?P<cardStr>".+"|\d+)'
+        argPat = r'move card (?P<cardStr>".+"|\d+)'
         argPat += r' to (?P<listDstStr>".+"|\d+)'
         argPat += r'(?: in (?P<boardStr>".+"|\d+))?'
         match = re.match(argPat, command)

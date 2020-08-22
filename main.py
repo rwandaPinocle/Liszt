@@ -35,28 +35,6 @@ from sidebar import SidebarView, SidebarModel, Board, List
 from center import CardView, CardModel
 
 
-def getBoards(db):
-    result = db.runCommand('show boards')
-    boards = []
-    with io.StringIO(result) as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            board = Board(row['title'], row['id'])
-            boards.append(board)
-    return boards
-
-
-def getLists(db, boardId):
-    result = db.runCommand(f'show lists {boardId}')
-    lists = []
-    with io.StringIO(result) as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            _list = List(row['title'], row['id'])
-            lists.append(_list)
-    return lists
-
-
 class NewCardTextBox(QLineEdit):
     newCardRequested = Signal(str, int)
     getCurrentList = Signal()
@@ -110,20 +88,15 @@ class MainWidget(QWidget):
         return
 
     def setupSidebar(self):
-        self.sidebarModel = SidebarModel()
-        rootNode = self.sidebarModel.invisibleRootItem()
+        self.sidebarModel = SidebarModel(db)
         self.sidebarView.setModel(self.sidebarModel)
-
-        for board in getBoards(self.db):
-            rootNode.appendRow(board)
-            for _list in getLists(self.db, board.rowid):
-                board.appendRow(_list)
         return
 
     def setupCardView(self):
         self.cardModel = CardModel(self.db)
         self.cardView.setModel(self.cardModel)
         self.sidebarView.listClicked.connect(self.cardModel.showListCards)
+        self.sidebarModel.cardChanged.connect(self.cardModel.refresh)
         return
 
     @Slot(str, int)

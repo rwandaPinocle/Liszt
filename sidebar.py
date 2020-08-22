@@ -1,3 +1,5 @@
+import io
+import csv
 from PySide2.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -22,6 +24,28 @@ from PySide2.QtCore import (
     Signal,
     Slot,
 )
+
+
+def getBoards(db):
+    result = db.runCommand('show boards')
+    boards = []
+    with io.StringIO(result) as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            board = Board(row['title'], row['id'])
+            boards.append(board)
+    return boards
+
+
+def getLists(db, boardId):
+    result = db.runCommand(f'show lists {boardId}')
+    lists = []
+    with io.StringIO(result) as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            _list = List(row['title'], row['id'])
+            lists.append(_list)
+    return lists
 
 
 class Board(QStandardItem):
@@ -57,6 +81,7 @@ class SidebarView(QTreeView):
 
         self.header().hide()
         self.clicked.connect(self.sendListId)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
         return
 
     def sendListId(self, modelIdx):
@@ -68,8 +93,37 @@ class SidebarView(QTreeView):
 
 
 class SidebarModel(QStandardItemModel):
-    def __init__(self):
+    cardChanged = Signal()
+
+    def __init__(self, db):
         QStandardItemModel.__init__(self, parent=None)
+        self.db = db
+        self.refresh()
         return
+
+    def refresh(self):
+        rootNode = self.invisibleRootItem()
+        for board in getBoards(self.db):
+            rootNode.appendRow(board)
+            for _list in getLists(self.db, board.rowid):
+                board.appendRow(_list)
+        return
+
+    def dropMimeData(self, data, action, row, column, parent):
+        target = self.itemFromIndex(parent)
+        if type(target) == List and 'CARD' in data.text():
+            cardid = data.text().split('=')[-1]
+            cmd = f'move card {cardid} to {target.rowid}'
+            self.db.runCommand(cmd)
+            self.cardChanged.emit()
+            return True
+        else:
+            return False
+
+    def mimeTypes(self):
+        return ['text/plain']
+
+
+
 
 

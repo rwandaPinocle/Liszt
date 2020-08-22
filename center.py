@@ -22,6 +22,8 @@ from PySide2.QtGui import (
 )
 from PySide2.QtCore import (
     QFile,
+    QMimeData,
+    QByteArray,
     Signal,
     Slot,
 )
@@ -43,7 +45,7 @@ class Card(QStandardItem):
         QStandardItem.__init__(self)
         self.name = name
         self.rowid = rowid
-        self.setText(f'{rowid}\t{name}')
+        self.setText(name)
 
 
 class CardView(QListView):
@@ -67,14 +69,25 @@ class CardModel(QStandardItemModel):
         self.listId = -1
         return
 
+    @Slot()
+    def refresh(self):
+        self.clear()
+        for card in reversed(getCards(self.db, self.listId)):
+            self.appendRow(card)
+        return
+    
     @Slot(int)
     def showListCards(self, listId):
         self.listId = listId
-        self.clear()
-        for card in reversed(getCards(self.db, listId)):
-            self.appendRow(card)
+        self.refresh()
         return
 
     @Slot()
     def currentList(self):
         return self.listId
+
+    def mimeData(self, indexes):
+        result = QMimeData()
+        rowid = self.itemFromIndex(indexes[0]).rowid
+        result.setText(f'CARD={rowid}')
+        return result
