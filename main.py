@@ -32,12 +32,13 @@ from PySide2.QtGui import (
 
 from database import Database
 from sidebar import SidebarView, SidebarModel, Board, List
+from buttonTray import ButtonTray
 from center import CardView, CardModel
 
 
 class NewCardTextBox(QLineEdit):
     newCardRequested = Signal(str, int)
-    getCurrentList = Signal()
+    getCurrentList = Signal(list)
     cardAdded = Signal(int)
 
     def __init__(self):
@@ -52,9 +53,12 @@ class NewCardTextBox(QLineEdit):
 
     def handleReturn(self):
         text = self.text()
-        listid = self.getCurrentList.emit()
-        self.newCardRequested.emit(text, listid)
-        self.cardAdded.emit(listid)
+        listIdContainer = [-1]
+        self.getCurrentList.emit(listIdContainer)
+        listId = listIdContainer[0]
+
+        self.newCardRequested.emit(text, listId)
+        self.cardAdded.emit(listId)
         self.setText('')
         return
 
@@ -64,16 +68,21 @@ class MainWidget(QWidget):
         QWidget.__init__(self)
         self.db = db
         self.cardView = CardView(db)
-        self.sidebarView = SidebarView()
         self.newCardTextBox = NewCardTextBox()
+
+        mainLayout = QHBoxLayout()
+
+        self.sidebarView = SidebarView()
+        mainLayout.addWidget(self.sidebarView)
 
         centralLayout = QVBoxLayout()
         centralLayout.addWidget(self.newCardTextBox)
         centralLayout.addWidget(self.cardView)
-
-        mainLayout = QHBoxLayout()
-        mainLayout.addWidget(self.sidebarView)
         mainLayout.addLayout(centralLayout)
+
+        buttonTray = ButtonTray(db)
+        mainLayout.addWidget(buttonTray)
+
         self.setLayout(mainLayout)
 
         self.setupSidebar()
@@ -124,6 +133,6 @@ if __name__ == "__main__":
     app = QApplication([])
     db = Database()
     mainWin = LisztWindow(db)
-    mainWin.setFixedSize(600, 400)
+    mainWin.setFixedSize(1000, 800)
     mainWin.show()
     sys.exit(app.exec_())

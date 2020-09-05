@@ -82,9 +82,10 @@ class CardModel(QStandardItemModel):
         self.refresh()
         return
 
-    @Slot()
-    def currentList(self):
-        return self.listId
+    @Slot(list)
+    def currentList(self, listidContainer):
+        listidContainer[0] = self.listId
+        return
 
     def mimeData(self, indexes):
         result = QMimeData()
