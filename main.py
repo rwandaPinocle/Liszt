@@ -53,7 +53,7 @@ class NewCardTextBox(QLineEdit):
 
     def handleReturn(self):
         text = self.text()
-        listIdContainer = [-1]
+        listIdContainer = []
         self.getCurrentList.emit(listIdContainer)
         listId = listIdContainer[0]
 
@@ -80,14 +80,15 @@ class MainWidget(QWidget):
         centralLayout.addWidget(self.cardView)
         mainLayout.addLayout(centralLayout)
 
-        buttonTray = ButtonTray(db)
-        mainLayout.addWidget(buttonTray)
+        self.buttonTray = ButtonTray(db)
+        mainLayout.addWidget(self.buttonTray)
 
         self.setLayout(mainLayout)
 
         self.setupSidebar()
         self.setupCardView()
         self.setupNewCardTextBox()
+        self.setupButtonTray()
         return
 
     def setupNewCardTextBox(self):
@@ -99,6 +100,7 @@ class MainWidget(QWidget):
     def setupSidebar(self):
         self.sidebarModel = SidebarModel(db)
         self.sidebarView.setModel(self.sidebarModel)
+        self.sidebarModel.rowsInserted.connect(self.sidebarView.expandAll)
         return
 
     def setupCardView(self):
@@ -106,6 +108,14 @@ class MainWidget(QWidget):
         self.cardView.setModel(self.cardModel)
         self.sidebarView.listClicked.connect(self.cardModel.showListCards)
         self.sidebarModel.cardChanged.connect(self.cardModel.refresh)
+        self.sidebarView.expandAll()
+        return
+
+    def setupButtonTray(self):
+        self.buttonTray.buttonPressed.connect(self.cardModel.refresh)
+        self.buttonTray.buttonPressed.connect(self.sidebarModel.refresh)
+        self.buttonTray.getCurrentList.connect(self.cardModel.currentList)
+        self.buttonTray.getSelectedCards.connect(self.cardView.selectedCards)
         return
 
     @Slot(str, int)

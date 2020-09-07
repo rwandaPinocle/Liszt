@@ -26,10 +26,14 @@ class Database:
             'add card': self.addCard,
             'add list': self.addList,
             'add board': self.addBoard,
+            'add button': self.addButton,
 
             'show cards': self.showCards,
             'show lists': self.showLists,
             'show boards': self.showBoards,
+            'show buttons': self.showButtons,
+
+            'get button': self.getButton,
 
             'move card': self.moveCard,
             'move list': self.moveList,
@@ -41,6 +45,7 @@ class Database:
             'delete card': self.delCard,
             'delete list': self.delList,
             'delete board': self.delBoard,
+            # 'delete button': self.delButton,
         }
         return
 
@@ -49,25 +54,22 @@ class Database:
 
     def initializeDb(self):
         print('initializing db')
-        sql = 'CREATE TABLE boards (title text, idx integer)'
-        self.db.execute(sql)
+        sqlLines = [
+            'CREATE TABLE boards (title text, idx integer)',
+            'CREATE TABLE lists (title text, idx integer, board integer)',
+            '''CREATE TABLE cards
+                (title text, idx integer, dueDate integer, list integer)''',
+            'CREATE TABLE buttons (name text, command text, idx integer)',
+            "INSERT INTO boards VALUES ('Personal', 0)",
+            """INSERT INTO buttons VALUES
+                ('Delete card', 'delete card $CARD', 0)""",
+            "INSERT INTO lists VALUES ('To do', 0, 1)",
+            "INSERT INTO lists VALUES ('Doing', 1, 1)",
+            "INSERT INTO lists VALUES ('Done', 2, 1)",
+        ]
+        for sql in sqlLines:
+            self.db.execute(sql)
 
-        sql = 'CREATE TABLE lists (title text, idx integer, board integer)'
-        self.db.execute(sql)
-
-        sql = '''CREATE TABLE cards
-            (title text, idx integer, dueDate integer, list integer)'''
-        self.db.execute(sql)
-
-        sql = "INSERT INTO boards VALUES ('Personal', 0)"
-        self.db.execute(sql)
-
-        sql = 'SELECT ROWID FROM boards WHERE title="Personal"'
-        bId = self.db.execute(sql).fetchone()[0]
-
-        sql = 'INSERT INTO lists VALUES (?, ?, ?)'
-        values = [('To do', 0, bId), ('Doing', 1, bId), ('Done', 2, bId)]
-        self.db.executemany(sql, values)
         self.db.commit()
         return
 
@@ -75,6 +77,7 @@ class Database:
         '''
         Executes a command on the datatree
         '''
+        print('Running command:', cmd)
         items = self.actions.items()
         op = next(func for verb, func in items if cmd.startswith(verb))
 
@@ -205,7 +208,7 @@ class Database:
 
         # Get new index
         boardId = self.getCurrentBoardId()
-        newIdx = self.getMaxIdx('lists', 'name', boardId)
+        newIdx = self.getMaxIdx('lists', 'title', boardId)
 
         # Insert list into table
         values = (newListTitle, newIdx, boardId)
@@ -228,6 +231,25 @@ class Database:
         # Insert board into table
         values = (newBoardTitle, newIdx)
         sql = f'INSERT INTO boards(title, idx) VALUES {values}'
+        self.db.execute(sql)
+        return
+
+    def addButton(self, command):
+        '''
+        add button "Button title" "command"
+        '''
+        # Parse command string
+        pat = r'add button "(.*)" "(.*)"'
+        match = re.match(pat, command)
+        newButtonName = match.group(1).strip('"')
+        newButtonCommand = match.group(2).strip('"')
+
+        # Get new index
+        newIdx = self.getMaxIdx('buttons')
+
+        # Insert button into table
+        values = (newButtonName, newButtonCommand, newIdx)
+        sql = f'INSERT INTO buttons(name, command, idx) VALUES {values}'
         self.db.execute(sql)
         return
 
@@ -293,7 +315,7 @@ class Database:
 
     def showBoards(self, command):
         '''
-        show-boards
+        show boards
         '''
         sql = '''
             SELECT ROWID, title
@@ -306,6 +328,39 @@ class Database:
         for board in boards:
             result += f'{board[0]}\t{board[1]}\n'
         return result
+
+    def showButtons(self, command):
+        '''
+        show buttons
+        '''
+        sql = '''
+            SELECT ROWID, name, command
+            FROM buttons
+            ORDER BY idx ASC
+        '''
+        buttons = list(self.db.execute(sql))
+
+        result = 'id\tname\tcommand\n'
+        for button in buttons:
+            result += f'{button[0]}\t{button[1]}\t{button[2]}\n'
+        return result
+
+    def getButton(self, command):
+        '''
+        get button
+        '''
+        print('Command:', command)
+        argPat = r'get button (\d*)'
+        match = re.match(argPat, command)
+
+        buttonId = match.group(1)
+        sql = f'''
+            SELECT command
+            FROM buttons
+            WHERE ROWID = {buttonId}
+        '''
+        command = self.db.execute(sql).fetchone()[0]
+        return command
 
     def moveCard(self, command):
         '''

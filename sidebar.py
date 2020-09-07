@@ -102,6 +102,7 @@ class SidebarModel(QStandardItemModel):
         return
 
     def refresh(self):
+        self.clear()
         rootNode = self.invisibleRootItem()
         for board in getBoards(self.db):
             rootNode.appendRow(board)
@@ -122,8 +123,3 @@ class SidebarModel(QStandardItemModel):
 
     def mimeTypes(self):
         return ['text/plain']
-
-
-
-
-

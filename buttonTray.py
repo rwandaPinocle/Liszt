@@ -1,3 +1,5 @@
+import csv
+import io
 
 from PySide2.QtWidgets import (
     QApplication,
@@ -36,10 +38,12 @@ from PySide2 import QtCore
 
 
 class ActionButton(QPushButton):
-    def __init__(self, title, action, parent=None):
+    action = Signal(int)
+
+    def __init__(self, title, buttonId, parent=None):
         QPushButton.__init__(self, title)
         self.title = title
-        self.action = action
+        self.buttonId = buttonId
         self.setStyleSheet('''
             QPushButton {
                 background-color: #2e2e2e;
@@ -48,28 +52,108 @@ class ActionButton(QPushButton):
                 min-width: 125px;
             };
         ''')
+        self.clicked.connect(self.dispatchAction)
+        return
+    
+    @Slot()
+    def dispatchAction(self):
+        self.action.emit(self.buttonId)
         return
 
 
 class EditButton(QPushButton):
-    def __init__(self):
-        return
+    editPressed = Signal(int)
 
-
-class ButtonRow(QWidget):
-    def __init__(self, title, action, parent=None):
-        QWidget.__init__(self)
-        self.layout = QHBoxLayout()
-        self.actionButton = QPushButton(title)
-        self.editButton = QPushButton('edit')
-
-        self.editButton.setStyleSheet('''
+    def __init__(self, buttonId):
+        QPushButton.__init__(self, 'edit')
+        self.buttonId = buttonId
+        self.setStyleSheet('''
             QPushButton {
                 background-color: #2e2e2e;
                 color: #cccccc;
                 max-width: 40px;
             };
         ''')
+        self.pressed.connect(self.handlePress)
+        return
+
+    @Slot()
+    def handlePress(self):
+        self.editPressed.emit(self.buttonId)
+        return
+
+
+class EditDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+        self.setStyleSheet('''
+            QDialog {
+                background-color: #2e2e2e;
+                color: #cccccc;
+                min-width: 500px;
+            };
+        ''')
+        
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        nameLayout = QHBoxLayout()
+
+        nameLabel = QLabel('Name:')
+        nameLabel.setStyleSheet('QLabel { color: #cccccc; };')
+        nameLayout.addWidget(nameLabel)
+
+        nameEdit = QLineEdit()
+        nameEdit.setStyleSheet('''
+            QLineEdit {
+                background-color: #2a2a2a;
+                color: #cccccc;
+            }; ''')
+        nameLayout.addWidget(nameEdit)
+        self.layout.addLayout(nameLayout)
+
+        commandLayout = QHBoxLayout()
+
+        commandLabel = QLabel('Command:')
+        commandLabel.setStyleSheet('QLabel { color: #cccccc; };')
+        commandLayout.addWidget(commandLabel)
+
+        commandEdit = QLineEdit()
+        commandEdit.setStyleSheet('''
+            QLineEdit {
+                background-color: #2a2a2a;
+                color: #cccccc;
+            }; ''')
+        commandLayout.addWidget(commandEdit)
+        self.layout.addLayout(commandLayout)
+
+        buttonLayout = QHBoxLayout()
+        cancelButton = QPushButton('Cancel')
+        cancelButton.setStyleSheet('''
+            QPushButton {
+                background-color: #2e2e2e;
+                color: #cccccc;
+            };
+        ''')
+        saveButton = QPushButton('Save')
+        saveButton.setStyleSheet('''
+            QPushButton {
+                background-color: #2e2e2e;
+                color: #cccccc;
+            };
+        ''')
+        buttonLayout.addWidget(saveButton)
+        buttonLayout.addWidget(cancelButton)
+        self.layout.addLayout(buttonLayout)
+        return
+
+
+class ButtonRow(QWidget):
+    def __init__(self, title, buttonId, parent=None):
+        QWidget.__init__(self)
+        self.layout = QHBoxLayout()
+        self.actionButton = ActionButton(title, buttonId)
+        self.editButton = EditButton(buttonId)
 
         self.setStyleSheet('''
             QWidget {
@@ -94,10 +178,26 @@ class ButtonRow(QWidget):
     '''
 
 
+class TrayContent(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        self.setStyleSheet('''
+            QWidget {
+                background-color: #2e2e2e;
+                color: #cccccc;
+            };
+        ''')
+        return
+
 
 class ButtonTray(QScrollArea):
+    getSelectedCards = Signal(list)
+    getCurrentList = Signal(list)
+    buttonPressed = Signal()
+
     def __init__(self, db, parent=None):
         QScrollArea.__init__(self)
+        self.db = db
         self.setStyleSheet('''
             QScrollArea {
                 background-color: #2e2e2e;
@@ -105,43 +205,77 @@ class ButtonTray(QScrollArea):
                 min-width: 220px;
                 max-width: 220px
             };
-
         ''')
         self.verticalScrollBar().setStyleSheet('''
             QScrollBar:vertical {
                 background: #2e2e2e;
             };
         ''')
-        self.content = QWidget()
-        self.content.setMinimumSize(200, 2000)
-        self.content.setStyleSheet('''
-            QWidget {
-                background-color: #2e2e2e;
-                color: #cccccc;
-            };
-        ''')
+        self.content = TrayContent()
         self.setWidget(self.content)
 
-        self.layout = QVBoxLayout()
-        self.content.setLayout(self.layout)
-        #self.setLayout(self.layout)
+        self.editDialog = EditDialog()
+        self.additionButton = QPushButton('New Button')
 
         self.showButtons()
         self.buttons = []
-        #self.setMinimumSize(200, 1000)
         self.content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
-        return
 
-    def showButtons(self):
-        self.buttons = []
-        for i in range(50):
-            buttonRow = ButtonRow(f'Button {i}', '')
-            self.buttons.append(buttonRow)
-            self.layout.addWidget(buttonRow)
+        self.buttonPressed.connect(self.showButtons)
         return
 
     @Slot()
-    def adjustSize(self, rowCount):
+    def showButtons(self):
+        self.layout = QVBoxLayout()
+        result = self.db.runCommand('show buttons')
+        self.buttonRows = []
+        contentHeight = 0
+        buttonHeight = 50
+        with io.StringIO(result) as f:
+            reader = csv.DictReader(f, delimiter='\t')
+            for row in reader:
+                buttonRow = ButtonRow(row['name'], int(row['id']))
+                buttonRow.actionButton.action.connect(self.actionButtonPressed)
+                buttonRow.editButton.editPressed.connect(self.editButtonPressed)
+                self.buttonRows.append(buttonRow)
+                self.layout.addWidget(buttonRow)
+                contentHeight += buttonHeight
+
+        self.layout.addWidget(self.additionButton)
+        contentHeight += buttonHeight
+
+        self.content.setLayout(self.layout)
+        self.content.setMinimumSize(220, contentHeight)
         return
 
+    @Slot(int)
+    def actionButtonPressed(self, buttonId):
+        buttonCmd = self.db.runCommand(f'get button {buttonId}')
+        selectedCards = []
+        currentList = []
+
+        self.getSelectedCards.emit(selectedCards)
+        self.getCurrentList.emit(currentList)
+
+        if '$CARD' in buttonCmd:
+            for card in selectedCards:
+                newCmd = str(buttonCmd)
+                newCmd = newCmd.replace('$CARD', str(card))
+                newCmd = newCmd.replace('$LIST', str(currentList[0]))
+                self.db.runCommand(newCmd)
+        else:
+            newCmd = str(buttonCmd)
+            newCmd.replace('$LIST', str(currentList[0]))
+            self.db.runCommand(newCmd)
+        self.buttonPressed.emit()
+        return
+
+    @Slot(int)
+    def editButtonPressed(self, buttonId):
+        self.editDialog.show()       
+        return
+
+    @Slot()
+    def additionButtonPressed(self):
+        return
 

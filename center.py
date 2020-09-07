@@ -61,6 +61,18 @@ class CardView(QListView):
         self.setDragDropMode(QAbstractItemView.DragDrop)
         return
 
+    @Slot(list)
+    def selectedCards(self, cardList):
+        indexes = self.selectedIndexes()
+        print(indexes)
+        for idx in indexes:
+            print(idx)
+            cardModel = self.model().itemFromIndex(idx)
+            cardId = cardModel.rowid
+            print(cardId)
+            cardList.append(cardId)
+        return
+
 
 class CardModel(QStandardItemModel):
     def __init__(self, db):
@@ -84,7 +96,7 @@ class CardModel(QStandardItemModel):
 
     @Slot(list)
     def currentList(self, listidContainer):
-        listidContainer[0] = self.listId
+        listidContainer.append(self.listId)
         return
 
     def mimeData(self, indexes):
