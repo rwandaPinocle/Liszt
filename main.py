@@ -17,6 +17,7 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QAbstractItemView,
+    QPushButton,
 )
 from PySide2.QtCore import (
     QFile,
@@ -63,6 +64,19 @@ class NewCardTextBox(QLineEdit):
         return
 
 
+class NewBoardButton(QPushButton):
+    def __init__(self, parent=None):
+        QPushButton.__init__(self, 'New Board', parent)
+        self.setStyleSheet('''
+            QPushButton {
+                font-size: 11pt;
+                background-color: #2e2e2e;
+                color: #cccccc;
+            };
+        ''')
+        return
+
+
 class MainWidget(QWidget):
     def __init__(self, db, parent=None):
         QWidget.__init__(self)
@@ -72,8 +86,12 @@ class MainWidget(QWidget):
 
         mainLayout = QHBoxLayout()
 
+        self.leftLayout = QVBoxLayout()
         self.sidebarView = SidebarView()
-        mainLayout.addWidget(self.sidebarView)
+        self.leftLayout.addWidget(self.sidebarView)
+        self.newBoardButton = NewBoardButton()
+        self.leftLayout.addWidget(self.newBoardButton)
+        mainLayout.addLayout(self.leftLayout)
 
         centralLayout = QVBoxLayout()
         centralLayout.addWidget(self.newCardTextBox)
@@ -87,6 +105,7 @@ class MainWidget(QWidget):
 
         self.setupSidebar()
         self.setupCardView()
+        self.setupNewBoardButton()
         self.setupNewCardTextBox()
         self.setupButtonTray()
         return
@@ -111,6 +130,10 @@ class MainWidget(QWidget):
         self.sidebarView.expandAll()
         return
 
+    def setupNewBoardButton(self):
+        self.newBoardButton.pressed.connect(self.makeNewBoard)
+        return
+
     def setupButtonTray(self):
         self.buttonTray.buttonPressed.connect(self.cardModel.refresh)
         self.buttonTray.buttonPressed.connect(self.sidebarModel.refresh)
@@ -121,6 +144,12 @@ class MainWidget(QWidget):
     @Slot(str, int)
     def makeNewCard(self, text, listid):
         self.db.runCommand(f'add card "{text}" to {listid}')
+        return
+
+    @Slot()
+    def makeNewBoard(self):
+        self.db.runCommand(f'add board "New Board"')
+        self.sidebarModel.refresh()
         return
 
 

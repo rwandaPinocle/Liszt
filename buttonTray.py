@@ -38,29 +38,44 @@ from PySide2 import QtCore
 
 
 class ActionButton(QPushButton):
-    def __init__(self, title, buttonId, parent=None):
+    def __init__(self, title, parent=None):
         QPushButton.__init__(self, title)
         self.title = title
-        self.buttonId = buttonId
         self.setStyleSheet('''
             QPushButton {
+                font-size: 11pt;
                 background-color: #2e2e2e;
                 color: #cccccc;
-                max-width: 125px;
-                min-width: 125px;
+                max-width: 145px;
+                min-width: 145px;
             };
         ''')
         return
 
 
 class EditButton(QPushButton):
-    def __init__(self, buttonId):
-        QPushButton.__init__(self, 'edit')
+    def __init__(self):
+        QPushButton.__init__(self, 'Edit')
         self.setStyleSheet('''
             QPushButton {
+                font-size: 10pt;
                 background-color: #2e2e2e;
                 color: #cccccc;
-                max-width: 40px;
+                max-width: 30px;
+            };
+        ''')
+        return
+
+
+class DeleteButton(QPushButton):
+    def __init__(self):
+        QPushButton.__init__(self, 'Del')
+        self.setStyleSheet('''
+            QPushButton {
+                font-size: 10pt;
+                background-color: #2e2e2e;
+                color: #cccccc;
+                max-width: 30px;
             };
         ''')
         return
@@ -137,7 +152,9 @@ class EditDialog(QDialog):
         self.layout.addLayout(buttonLayout)
         return
 
-    def showWithText(self, name, cmd, buttonId=-1):
+    @Slot()
+    @Slot(str, str, int)
+    def showWithText(self, name='', cmd='', buttonId=-1):
         self.buttonId = buttonId
         self.commandTextEdit.setText(cmd)
         self.nameTextEdit.setText(name)
@@ -155,15 +172,18 @@ class EditDialog(QDialog):
 
 class ButtonRow(QWidget):
     dispatchAction = Signal(int)
+    delButtonPressed = Signal(int)
     editButtonPressed = Signal(str, str, int)
 
     def __init__(self, title, buttonId, command, parent=None):
         QWidget.__init__(self)
         self.layout = QHBoxLayout()
-        self.actionButton = ActionButton(title, buttonId)
+        self.actionButton = ActionButton(title)
         self.actionButton.pressed.connect(self.handleActionButton)
-        self.editButton = EditButton(buttonId)
+        self.editButton = EditButton()
         self.editButton.pressed.connect(self.sendEditInfo)
+        self.delButton = DeleteButton()
+        self.delButton.pressed.connect(self.handleDeleteButton)
 
         self.buttonTitle = title
         self.command = command
@@ -177,11 +197,16 @@ class ButtonRow(QWidget):
 
         self.layout.addWidget(self.actionButton)
         self.layout.addWidget(self.editButton)
+        self.layout.addWidget(self.delButton)
         self.setLayout(self.layout)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         return
+
+    @Slot()
+    def handleDeleteButton(self):
+        self.delButtonPressed.emit(self.buttonId)
 
     @Slot()
     def sendEditInfo(self):
@@ -218,8 +243,8 @@ class ButtonTray(QScrollArea):
             QScrollArea {
                 background-color: #2e2e2e;
                 color: #cccccc;
-                min-width: 220px;
-                max-width: 220px
+                min-width: 250px;
+                max-width: 250px
             };
         ''')
         self.verticalScrollBar().setStyleSheet('''
@@ -227,13 +252,10 @@ class ButtonTray(QScrollArea):
                 background: #2e2e2e;
             };
         ''')
-        self.content = TrayContent()
-        self.setWidget(self.content)
 
         self.editDialog = EditDialog()
         self.editDialog.buttonEditsSaved.connect(self.handleEditChanges)
 
-        self.content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         self.showButtons()
         self.buttons = []
 
@@ -242,6 +264,7 @@ class ButtonTray(QScrollArea):
 
     @Slot()
     def showButtons(self):
+        self.content = TrayContent()
         layout = QVBoxLayout()
         result = self.db.runCommand('show buttons')
         self.buttonRows = []
@@ -254,25 +277,42 @@ class ButtonTray(QScrollArea):
                 buttonId = int(row['id'])
                 buttonCmd = self.db.runCommand(f'get button {buttonId}')
 
-                buttonRow = ButtonRow(row['name'], buttonId, buttonCmd)
-                print('Making button ', row['name'])
-                buttonRow.dispatchAction.connect(self.actionButtonPressed)
-                buttonRow.editButtonPressed.connect(self.editDialog.showWithText)
+                buttonRow = ButtonRow(buttonName, buttonId, buttonCmd)
+                buttonRow.dispatchAction.connect(self.handleActionButton)
+                buttonRow.editButtonPressed.connect(
+                        self.editDialog.showWithText)
+                buttonRow.delButtonPressed.connect(self.handleDeleteButton)
 
                 self.buttonRows.append(buttonRow)
                 layout.addWidget(buttonRow)
                 contentHeight += buttonHeight
 
         self.additionButton = QPushButton('New Button')
+        self.additionButton.pressed.connect(self.handleAdditionButton)
         layout.addWidget(self.additionButton)
         contentHeight += buttonHeight
 
         self.content.setLayout(layout)
         self.content.setMinimumSize(220, contentHeight)
+        self.content.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        self.setWidget(self.content)
         return
 
     @Slot(int)
-    def actionButtonPressed(self, buttonId):
+    def handleDeleteButton(self, buttonId):
+        cmd = f'delete button {buttonId}'
+        self.db.runCommand(cmd)
+        self.showButtons()
+        return
+
+
+    @Slot()
+    def handleAdditionButton(self):
+        self.editDialog.showWithText()
+        return
+
+    @Slot(int)
+    def handleActionButton(self, buttonId):
         buttonCmd = self.db.runCommand(f'get button {buttonId}')
         selectedCards = []
         currentList = []
@@ -295,13 +335,11 @@ class ButtonTray(QScrollArea):
 
     @Slot(str, str, int)
     def handleEditChanges(self, name, command, buttonId):
-        if buttonId == -1:
+        if buttonId != -1:
             command = f'update button {buttonId} "{name}" "{command}"'
         else:
             command = f'add button "{name}" "{command}"'
-        print('run command')
         self.db.runCommand(command)
-        print('showing buttons')
         self.showButtons()
         return
 

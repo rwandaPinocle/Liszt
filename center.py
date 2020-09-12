@@ -29,8 +29,10 @@ from PySide2.QtCore import (
 )
 
 
-def getCards(db, listid):
-    result = db.runCommand(f'show cards {listid}')
+def getCards(db, listId):
+    if listId == -1:
+        return []
+    result = db.runCommand(f'show cards {listId}')
     cards = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -54,22 +56,22 @@ class CardView(QListView):
         self.db = db
         self.setStyleSheet('''
                 QListView {
+                    font-size: 16pt;
                     background-color: #2e2e2e;
                     color: #cccccc;
                 };
                 ''')
         self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setSpacing(7)
         return
+
 
     @Slot(list)
     def selectedCards(self, cardList):
         indexes = self.selectedIndexes()
-        print(indexes)
         for idx in indexes:
-            print(idx)
             cardModel = self.model().itemFromIndex(idx)
             cardId = cardModel.rowid
-            print(cardId)
             cardList.append(cardId)
         return
 

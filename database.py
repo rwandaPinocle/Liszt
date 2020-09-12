@@ -35,6 +35,8 @@ class Database:
 
             'get button': self.getButton,
 
+            'update button': self.updateButton,
+
             'move card': self.moveCard,
             'move list': self.moveList,
 
@@ -45,7 +47,7 @@ class Database:
             'delete card': self.delCard,
             'delete list': self.delList,
             'delete board': self.delBoard,
-            # 'delete button': self.delButton,
+            'delete button': self.delButton,
         }
         return
 
@@ -267,8 +269,8 @@ class Database:
 
         sql = f'''
             UPDATE buttons
-            SET name = {buttonTitle},
-                command = {buttonCommand}
+            SET name = '{buttonTitle}',
+                command = '{buttonCommand}'
             WHERE ROWID = {buttonId}
             '''
         self.db.execute(sql)
@@ -463,6 +465,20 @@ class Database:
         boardId = match.group('boardId')
         sql = f'''
             DELETE FROM boards
+            WHERE ROWID = {boardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def delButton(self, command):
+        '''
+        delete button 123
+        '''
+        pat = r'delete button (\d*)'
+        match = re.match(pat, command)
+        boardId = match.group(1)
+        sql = f'''
+            DELETE FROM buttons
             WHERE ROWID = {boardId}
         '''
         self.db.execute(sql)
