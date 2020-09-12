@@ -253,6 +253,26 @@ class Database:
         self.db.execute(sql)
         return
 
+    def updateButton(self, command):
+        '''
+        update button 123 "Button title" "command"
+        '''
+        # Parse command string
+        pat = r'update button (\d*) "(.*)" "(.*)"'
+        match = re.match(pat, command)
+
+        buttonId = match.group(1)
+        buttonTitle = match.group(2)
+        buttonCommand = match.group(3)
+
+        sql = f'''
+            UPDATE buttons
+            SET name = {buttonTitle},
+                command = {buttonCommand}
+            WHERE ROWID = {buttonId}
+            '''
+        self.db.execute(sql)
+
     def showCards(self, command):
         '''
         show cards "List title"
@@ -349,7 +369,6 @@ class Database:
         '''
         get button
         '''
-        print('Command:', command)
         argPat = r'get button (\d*)'
         match = re.match(argPat, command)
 
