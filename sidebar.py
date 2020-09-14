@@ -31,7 +31,7 @@ from PySide2.QtCore import (
 
 
 def getBoards(db):
-    result = db.runCommand('show boards')
+    result = db.runCommand('show-boards')
     boards = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -44,7 +44,7 @@ def getBoards(db):
 def getLists(db, boardId):
     if boardId == -1:
         return []
-    result = db.runCommand(f'show lists {boardId}')
+    result = db.runCommand(f'show-lists {boardId}')
     lists = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
@@ -229,7 +229,7 @@ class SidebarModel(QStandardItemModel):
         target = self.itemFromIndex(parent)
         if type(target) == List and 'CARD' in data.text():
             cardId = data.text().split('=')[-1]
-            cmd = f'move card {cardId} to {target.rowid}'
+            cmd = f'move-card {cardId} to {target.rowid}'
             self.db.runCommand(cmd)
             self.cardChanged.emit()
             return True

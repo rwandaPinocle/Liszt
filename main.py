@@ -143,12 +143,12 @@ class MainWidget(QWidget):
 
     @Slot(str, int)
     def makeNewCard(self, text, listid):
-        self.db.runCommand(f'add card "{text}" to {listid}')
+        self.db.runCommand(f'add-card "{text}" to {listid}')
         return
 
     @Slot()
     def makeNewBoard(self):
-        self.db.runCommand(f'add board "New Board"')
+        self.db.runCommand(f'add-board "New Board"')
         self.sidebarModel.refresh()
         return
 

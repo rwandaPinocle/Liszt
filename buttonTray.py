@@ -266,7 +266,7 @@ class ButtonTray(QScrollArea):
     def showButtons(self):
         self.content = TrayContent()
         layout = QVBoxLayout()
-        result = self.db.runCommand('show buttons')
+        result = self.db.runCommand('show-buttons')
         self.buttonRows = []
         contentHeight = 0
         buttonHeight = 50
@@ -275,7 +275,7 @@ class ButtonTray(QScrollArea):
             for row in reader:
                 buttonName = row['name']
                 buttonId = int(row['id'])
-                buttonCmd = self.db.runCommand(f'get button {buttonId}')
+                buttonCmd = self.db.runCommand(f'get-button {buttonId}')
 
                 buttonRow = ButtonRow(buttonName, buttonId, buttonCmd)
                 buttonRow.dispatchAction.connect(self.handleActionButton)
@@ -300,7 +300,7 @@ class ButtonTray(QScrollArea):
 
     @Slot(int)
     def handleDeleteButton(self, buttonId):
-        cmd = f'delete button {buttonId}'
+        cmd = f'delete-button {buttonId}'
         self.db.runCommand(cmd)
         self.showButtons()
         return
@@ -313,7 +313,7 @@ class ButtonTray(QScrollArea):
 
     @Slot(int)
     def handleActionButton(self, buttonId):
-        buttonCmd = self.db.runCommand(f'get button {buttonId}')
+        buttonCmd = self.db.runCommand(f'get-button {buttonId}')
         selectedCards = []
         currentList = []
 
@@ -336,9 +336,9 @@ class ButtonTray(QScrollArea):
     @Slot(str, str, int)
     def handleEditChanges(self, name, command, buttonId):
         if buttonId != -1:
-            command = f'update button {buttonId} "{name}" "{command}"'
+            command = f'rename-button {buttonId} "{name}" "{command}"'
         else:
-            command = f'add button "{name}" "{command}"'
+            command = f'add-button "{name}" "{command}"'
         self.db.runCommand(command)
         self.showButtons()
         return

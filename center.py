@@ -32,7 +32,7 @@ from PySide2.QtCore import (
 def getCards(db, listId):
     if listId == -1:
         return []
-    result = db.runCommand(f'show cards {listId}')
+    result = db.runCommand(f'show-cards {listId}')
     cards = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')

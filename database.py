@@ -23,31 +23,34 @@ class Database:
             'where': self.where,
             'goto': self.goto,
 
-            'add card': self.addCard,
-            'add list': self.addList,
-            'add board': self.addBoard,
-            'add button': self.addButton,
+            'add-card': self.addCard,
+            'add-list': self.addList,
+            'add-board': self.addBoard,
+            'add-button': self.addButton,
 
-            'show cards': self.showCards,
-            'show lists': self.showLists,
-            'show boards': self.showBoards,
-            'show buttons': self.showButtons,
+            'show-cards': self.showCards,
+            'show-lists': self.showLists,
+            'show-boards': self.showBoards,
+            'show-buttons': self.showButtons,
 
-            'get button': self.getButton,
+            'get-button': self.getButton,
 
-            'update button': self.updateButton,
+            'rename-button': self.renameButton,
+            #'rename-board': self.renameBoard,
+            #'rename-list': self.renameList,
+            #'rename-card': self.renameCard,
 
-            'move card': self.moveCard,
-            'move list': self.moveList,
+            'move-card': self.moveCard,
+            'move-list': self.moveList,
 
             #'shift card': '',
             #'shift list': '',
             #'shift board': '',
 
-            'delete card': self.delCard,
-            'delete list': self.delList,
-            'delete board': self.delBoard,
-            'delete button': self.delButton,
+            'delete-card': self.delCard,
+            'delete-list': self.delList,
+            'delete-board': self.delBoard,
+            'delete-button': self.delButton,
         }
         return
 
@@ -181,10 +184,10 @@ class Database:
 
     def addCard(self, command):
         '''
-        add card "card title" to "list title"
+        add-card "card title" to "list title"
         '''
         # Get card title and list title
-        pat = r'add card "(.*)" to (".*"|.*)'
+        pat = r'add-card "(.*)" to (".*"|.*)'
         match = re.match(pat, command)
         cardTitle = match.group(1)
         listStr = match.group(2)
@@ -201,10 +204,10 @@ class Database:
 
     def addList(self, command):
         '''
-        add list "List title"
+        add-list "List title"
         '''
         # Parse command string
-        pat = r'add list "(.*)"'
+        pat = r'add-list "(.*)"'
         match = re.match(pat, command)
         newListTitle = match.group(1)
 
@@ -220,10 +223,10 @@ class Database:
 
     def addBoard(self, command):
         '''
-        add board "Board title"
+        add-board "Board title"
         '''
         # Parse command string
-        pat = r'add board "(.*)"'
+        pat = r'add-board "(.*)"'
         match = re.match(pat, command)
         newBoardTitle = match.group(1).strip('"')
 
@@ -238,10 +241,10 @@ class Database:
 
     def addButton(self, command):
         '''
-        add button "Button title" "command"
+        add-button "Button title" "command"
         '''
         # Parse command string
-        pat = r'add button "(.*)" "(.*)"'
+        pat = r'add-button "(.*)" "(.*)"'
         match = re.match(pat, command)
         newButtonName = match.group(1).strip('"')
         newButtonCommand = match.group(2).strip('"')
@@ -255,12 +258,12 @@ class Database:
         self.db.execute(sql)
         return
 
-    def updateButton(self, command):
+    def renameButton(self, command):
         '''
-        update button 123 "Button title" "command"
+        rename-button 123 "Button title" "command"
         '''
         # Parse command string
-        pat = r'update button (\d*) "(.*)" "(.*)"'
+        pat = r'rename-button (\d*) "(.*)" "(.*)"'
         match = re.match(pat, command)
 
         buttonId = match.group(1)
@@ -277,10 +280,10 @@ class Database:
 
     def showCards(self, command):
         '''
-        show cards "List title"
-        show cards 123
+        show-cards "List title"
+        show-cards 123
         '''
-        pat = r'show cards (".*"|\d*)'
+        pat = r'show-cards (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get list id
@@ -303,11 +306,11 @@ class Database:
 
     def showLists(self, command):
         '''
-        show lists
-        show lists "board name"
-        show lists 123
+        show-lists
+        show-lists "board name"
+        show-lists 123
         '''
-        pat = r'show lists (".*"|\d*)'
+        pat = r'show-lists (".*"|\d*)'
         match = re.match(pat, command)
 
         # Get the board id
@@ -337,7 +340,7 @@ class Database:
 
     def showBoards(self, command):
         '''
-        show boards
+        show-boards
         '''
         sql = '''
             SELECT ROWID, title
@@ -353,7 +356,7 @@ class Database:
 
     def showButtons(self, command):
         '''
-        show buttons
+        show-buttons
         '''
         sql = '''
             SELECT ROWID, name, command
@@ -369,9 +372,9 @@ class Database:
 
     def getButton(self, command):
         '''
-        get button
+        get-button
         '''
-        argPat = r'get button (\d*)'
+        argPat = r'get-button (\d*)'
         match = re.match(argPat, command)
 
         buttonId = match.group(1)
@@ -385,11 +388,11 @@ class Database:
 
     def moveCard(self, command):
         '''
-        move card 123 to "list title"
-        move card 123 to "list title" in "board title"
-        move card 123 to 132
+        move-card 123 to "list title"
+        move-card 123 to "list title" in "board title"
+        move-card 123 to 132
         '''
-        argPat = r'move card (?P<cardStr>".+"|\d+)'
+        argPat = r'move-card (?P<cardStr>".+"|\d+)'
         argPat += r' to (?P<listDstStr>".+"|\d+)'
         argPat += r'(?: in (?P<boardStr>".+"|\d+))?'
         match = re.match(argPat, command)
@@ -430,9 +433,9 @@ class Database:
 
     def delCard(self, command):
         '''
-        delete card 123
+        delete-card 123
         '''
-        argPat = r'delete card (?P<cardId>\d+)'
+        argPat = r'delete-card (?P<cardId>\d+)'
         match = re.match(argPat, command)
         cardId = match.group('cardId')
         sql = f'''
@@ -444,9 +447,9 @@ class Database:
 
     def delList(self, command):
         '''
-        delete list 123
+        delete-list 123
         '''
-        argPat = r'delete list (?P<listId>\d+)'
+        argPat = r'delete-list (?P<listId>\d+)'
         match = re.match(argPat, command)
         listId = match.group('listId')
         sql = f'''
@@ -458,9 +461,9 @@ class Database:
 
     def delBoard(self, command):
         '''
-        delete board 123
+        delete-board 123
         '''
-        argPat = r'delete board (?P<boardId>\d+)'
+        argPat = r'delete-board (?P<boardId>\d+)'
         match = re.match(argPat, command)
         boardId = match.group('boardId')
         sql = f'''
@@ -472,9 +475,9 @@ class Database:
 
     def delButton(self, command):
         '''
-        delete button 123
+        delete-button 123
         '''
-        pat = r'delete button (\d*)'
+        pat = r'delete-button (\d*)'
         match = re.match(pat, command)
         boardId = match.group(1)
         sql = f'''
