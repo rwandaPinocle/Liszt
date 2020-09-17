@@ -86,8 +86,11 @@ class CardModel(QStandardItemModel):
     @Slot()
     def refresh(self):
         self.clear()
-        for card in reversed(getCards(self.db, self.listId)):
-            self.appendRow(card)
+        try:
+            for card in reversed(getCards(self.db, self.listId)):
+                self.appendRow(card)
+        except TypeError:
+            pass
         return
     
     @Slot(int)

@@ -120,6 +120,11 @@ class MainWidget(QWidget):
         self.sidebarModel = SidebarModel(db)
         self.sidebarView.setModel(self.sidebarModel)
         self.sidebarModel.rowsInserted.connect(self.sidebarView.expandAll)
+        self.sidebarView.renameList.connect(self.sidebarModel.onRenameList)
+        self.sidebarView.renameBoard.connect(self.sidebarModel.onRenameBoard)
+        self.sidebarView.deleteList.connect(self.sidebarModel.onDeleteList)
+        self.sidebarView.deleteBoard.connect(self.sidebarModel.onDeleteBoard)
+        self.sidebarView.addList.connect(self.sidebarModel.onAddList)
         return
 
     def setupCardView(self):

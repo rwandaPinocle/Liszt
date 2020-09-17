@@ -58,7 +58,7 @@ class Board(QStandardItem):
     def __init__(self, name, rowid):
         QStandardItem.__init__(self)
         self.name = name
-        self.rowid = rowid
+        self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
 
 
@@ -66,25 +66,25 @@ class List(QStandardItem):
     def __init__(self, name, rowid):
         QStandardItem.__init__(self)
         self.name = name
-        self.rowid = rowid
+        self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
 
 
 class BoardContextMenu(QMenu):
-    renameBoard = Signal()
-    deleteBoard = Signal()
-    addListToBoard = Signal()
+    renameBoardClick = Signal()
+    deleteBoardClick = Signal()
+    addListToBoardClick = Signal()
 
     def __init__(self, parent=None):
         QMenu.__init__(self)
         action = self.addAction('Rename')
-        action.triggered.connect(lambda x: self.renameBoard.emit())
+        action.triggered.connect(lambda x: self.renameBoardClick.emit())
         
         action = self.addAction('Delete')
-        action.triggered.connect(lambda x: self.deleteBoard.emit())
+        action.triggered.connect(lambda x: self.deleteBoardClick.emit())
 
         action = self.addAction('Add List')
-        action.triggered.connect(lambda x: self.addListToBoard.emit())
+        action.triggered.connect(lambda x: self.addListToBoardClick.emit())
 
         self.setStyleSheet('''
             QMenu {
@@ -95,16 +95,16 @@ class BoardContextMenu(QMenu):
 
 
 class ListContextMenu(QMenu):
-    renameBoard = Signal()
-    deleteBoard = Signal()
+    renameListClick = Signal()
+    deleteListClick = Signal()
 
     def __init__(self, parent=None):
         QMenu.__init__(self)
         action = self.addAction('Rename')
-        action.triggered.connect(lambda x: self.renameBoard.emit())
+        action.triggered.connect(lambda x: self.renameListClick.emit())
 
         action = self.addAction('Delete')
-        action.triggered.connect(lambda x: self.deleteBoard.emit())
+        action.triggered.connect(lambda x: self.deleteListClick.emit())
 
         self.setStyleSheet('''
             QMenu {
@@ -133,7 +133,7 @@ class SidebarView(QTreeView):
     renameBoard = Signal(str, int)
     deleteList = Signal(int)
     deleteBoard = Signal(int)
-    addList = Signal(str)
+    addList = Signal(str, int)
 
     def __init__(self, parent=None):
         QTreeView.__init__(self, parent=parent)
@@ -160,7 +160,13 @@ class SidebarView(QTreeView):
 
     def setupContextMenus(self):
         self.boardMenu = BoardContextMenu()
+        self.boardMenu.renameBoardClick.connect(self.onRenameBoardClick)
+        self.boardMenu.deleteBoardClick.connect(self.onDeleteBoardClick)
+        self.boardMenu.addListToBoardClick.connect(self.onAddListToBoardClick)
+
         self.listMenu = ListContextMenu()
+        self.listMenu.renameListClick.connect(self.onRenameListClick)
+        self.listMenu.deleteListClick.connect(self.onDeleteListClick)
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(
@@ -174,25 +180,59 @@ class SidebarView(QTreeView):
             self.listClicked.emit(listid)
         return
 
-    # TODO: Fill these out and connect them to the context menus
     @Slot()
-    def onRenameList(self):
+    def onRenameListClick(self):
+        listIndex = self.selectedIndexes()[0]
+        item = listIndex.model().itemFromIndex(listIndex)
+        titleText = "Rename List"
+        labelText = "New Name:"
+        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        if ok:
+            self.renameList.emit(newName, int(item.rowid))
         return
 
     @Slot()
-    def onDeleteList(self):
+    def onDeleteListClick(self):
+        listIndex = self.selectedIndexes()[0]
+        item = listIndex.model().itemFromIndex(listIndex)
+        titleText = "Delete List"
+        labelText = f'To delete, type "{item.name}"'
+        confirm, ok = QInputDialog().getText(self, titleText, labelText)
+        if ok and confirm == item.name:
+            self.deleteList.emit(item.rowid)
         return
 
     @Slot()
-    def onRenameBoard(self):
+    def onRenameBoardClick(self):
+        boardIndex = self.selectedIndexes()[0]
+        item = boardIndex.model().itemFromIndex(boardIndex)
+        titleText = "Rename Board"
+        labelText = "New Name:"
+        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        if ok:
+            self.renameBoard.emit(newName, item.rowid)
         return
 
     @Slot()
-    def onDeleteBoard(self):
+    def onDeleteBoardClick(self):
+        boardIndex = self.selectedIndexes()[0]
+        item = boardIndex.model().itemFromIndex(boardIndex)
+        titleText = "Delete Board"
+        labelText = f'To delete, type "{item.name}"'
+        confirm, ok = QInputDialog().getText(self, titleText, labelText)
+        if ok and confirm == item.name:
+            self.deleteBoard.emit(item.rowid)
         return
 
     @Slot()
-    def onAddListToBoard(self):
+    def onAddListToBoardClick(self):
+        boardIndex = self.selectedIndexes()[0]
+        item = boardIndex.model().itemFromIndex(boardIndex)
+        titleText = "New List"
+        labelText = "Name:"
+        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        if ok:
+            self.addList.emit(newName, item.rowid)
         return
 
     @Slot(QPoint)
@@ -204,6 +244,7 @@ class SidebarView(QTreeView):
             self.boardMenu.exec_(globalPoint)
         elif type(item) == List:
             self.listMenu.exec_(globalPoint)
+            self.listClicked.emit(int(item.rowid))
         return
 
 
@@ -238,3 +279,38 @@ class SidebarModel(QStandardItemModel):
 
     def mimeTypes(self):
         return ['text/plain']
+
+    @Slot(str, int)
+    def onRenameList(self, name, rowid):
+        cmd = f'rename-list {rowid} "{name}"'
+        self.db.runCommand(cmd)
+        self.refresh()
+        return
+
+    @Slot(str, int)
+    def onRenameBoard(self, name, rowid):
+        cmd = f'rename-board {rowid} "{name}"'
+        self.db.runCommand(cmd)
+        self.refresh()
+        return
+
+    @Slot(int)
+    def onDeleteList(self, rowid):
+        cmd = f'delete-list {rowid}'
+        self.db.runCommand(cmd)
+        self.refresh()
+        return
+
+    @Slot(int)
+    def onDeleteBoard(self, rowid):
+        cmd = f'delete-board {rowid}'
+        self.db.runCommand(cmd)
+        self.refresh()
+        return
+
+    @Slot(str, int)
+    def onAddList(self, name, boardid):
+        cmd = f'add-list "{name}" to {boardid}'
+        self.db.runCommand(cmd)
+        self.refresh()
+        return

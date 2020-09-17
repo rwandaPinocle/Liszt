@@ -36,9 +36,9 @@ class Database:
             'get-button': self.getButton,
 
             'rename-button': self.renameButton,
-            #'rename-board': self.renameBoard,
-            #'rename-list': self.renameList,
-            #'rename-card': self.renameCard,
+            'rename-board': self.renameBoard,
+            'rename-list': self.renameList,
+            'rename-card': self.renameCard,
 
             'move-card': self.moveCard,
             'move-list': self.moveList,
@@ -204,15 +204,15 @@ class Database:
 
     def addList(self, command):
         '''
-        add-list "List title"
+        add-list "List title" to 123
         '''
         # Parse command string
-        pat = r'add-list "(.*)"'
+        pat = r'add-list "(.*)" to (\d*)'
         match = re.match(pat, command)
         newListTitle = match.group(1)
+        boardId = match.group(2)
 
         # Get new index
-        boardId = self.getCurrentBoardId()
         newIdx = self.getMaxIdx('lists', 'title', boardId)
 
         # Insert list into table
@@ -275,6 +275,60 @@ class Database:
             SET name = '{buttonTitle}',
                 command = '{buttonCommand}'
             WHERE ROWID = {buttonId}
+            '''
+        self.db.execute(sql)
+
+    def renameBoard(self, command):
+        '''
+        rename-board 123 "board title"
+        '''
+        # Parse command string
+        pat = r'rename-board (\d*) "(.*)"'
+        match = re.match(pat, command)
+
+        boardId = match.group(1)
+        boardTitle = match.group(2)
+
+        sql = f'''
+            UPDATE boards
+            SET title = '{boardTitle}'
+            WHERE ROWID = {boardId}
+            '''
+        self.db.execute(sql)
+
+    def renameList(self, command):
+        '''
+        rename-list 123 "list title"
+        '''
+        # Parse command string
+        pat = r'rename-list (\d*) "(.*)"'
+        match = re.match(pat, command)
+
+        listId = match.group(1)
+        listTitle = match.group(2)
+
+        sql = f'''
+            UPDATE lists
+            SET title = '{listTitle}'
+            WHERE ROWID = {listId}
+            '''
+        self.db.execute(sql)
+
+    def renameCard(self, command):
+        '''
+        rename-card 123 "Card title"
+        '''
+        # Parse command string
+        pat = r'rename-card (\d*) "(.*)"'
+        match = re.match(pat, command)
+
+        cardId = match.group(1)
+        cardTitle = match.group(2)
+
+        sql = f'''
+            UPDATE cards
+            SET title = '{cardTitle}'
+            WHERE ROWID = {cardId}
             '''
         self.db.execute(sql)
 
