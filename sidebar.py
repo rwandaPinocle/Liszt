@@ -151,6 +151,7 @@ class SidebarView(QTreeView):
         self.header().hide()
         self.clicked.connect(self.sendListId)
         self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setWordWrap(True)
 
         self.renameListDialog = RenameDialog('New List Name')
         self.renameBoardDialog = RenameDialog('New Board Name')

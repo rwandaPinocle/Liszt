@@ -61,6 +61,7 @@ class CardView(QListView):
                     color: #cccccc;
                 };
                 ''')
+        self.setWordWrap(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setSpacing(7)
         return
