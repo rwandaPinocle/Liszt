@@ -45,9 +45,13 @@ def getCards(db, listId):
 class Card(QStandardItem):
     def __init__(self, name, rowid):
         QStandardItem.__init__(self)
+        self.itemType = 'CARD'
         self.name = name
         self.rowid = rowid
         self.setText(name)
+
+    def __str__(self):
+        return f'{self.itemType} {self.rowid} {self.name}'
 
 
 class CardView(QListView):
@@ -107,6 +111,6 @@ class CardModel(QStandardItemModel):
 
     def mimeData(self, indexes):
         result = QMimeData()
-        rowid = self.itemFromIndex(indexes[0]).rowid
-        result.setText(f'CARD={rowid}')
+        item = self.itemFromIndex(indexes[0])
+        result.setText(f'{item.itemType}={item.rowid}')
         return result

@@ -25,6 +25,7 @@ from PySide2.QtGui import (
 from PySide2.QtCore import (
     QFile,
     QPoint,
+    QMimeData,
     Signal,
     Slot,
 )
@@ -57,17 +58,25 @@ def getLists(db, boardId):
 class Board(QStandardItem):
     def __init__(self, name, rowid):
         QStandardItem.__init__(self)
+        self.itemType = 'BOARD'
         self.name = name
         self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
+
+    def __str__(self):
+        return f'{self.itemType} {self.rowid} {self.name}'
 
 
 class List(QStandardItem):
     def __init__(self, name, rowid):
         QStandardItem.__init__(self)
+        self.itemType = 'LIST'
         self.name = name
         self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
+
+    def __str__(self):
+        return f'{self.itemType} {self.rowid} {self.name}'
 
 
 class BoardContextMenu(QMenu):
@@ -269,14 +278,34 @@ class SidebarModel(QStandardItemModel):
 
     def dropMimeData(self, data, action, row, column, parent):
         target = self.itemFromIndex(parent)
+        result = False
         if type(target) == List and 'CARD' in data.text():
             cardId = data.text().split('=')[-1]
             cmd = f'move-card {cardId} to {target.rowid}'
             self.db.runCommand(cmd)
             self.cardChanged.emit()
-            return True
-        else:
-            return False
+            result = True
+
+        elif type(target) == Board and 'LIST' in data.text():
+            '''
+            listId = data.text().split('=')[-1]
+            boardId = target.rowid
+            listIdxCurrent = data
+            cmd = f'move-card {cardId} to {target.rowid}'
+            self.db.runCommand(cmd)
+            self.cardChanged.emit()
+            '''
+            result = True
+
+        elif type(target) == None and 'BOARD' in data.text():
+            result = True
+
+        print(target)
+        print(data.text())
+        print('row', row)
+        print('column', column)
+
+        return result
 
     def mimeTypes(self):
         return ['text/plain']
@@ -315,3 +344,9 @@ class SidebarModel(QStandardItemModel):
         self.db.runCommand(cmd)
         self.refresh()
         return
+
+    def mimeData(self, indexes):
+        result = QMimeData()
+        item = self.itemFromIndex(indexes[0])
+        result.setText(f'{item.itemType}={item.rowid}')
+        return result
