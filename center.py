@@ -36,22 +36,24 @@ def getCards(db, listId):
     cards = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            card = Card(row['title'], row['id'])
+        for idx, row in enumerate(reader):
+            card = Card(row['title'], row['id'], idx)
             cards.append(card)
     return cards
 
+# TODO: Create a json serialization of Card, List, and Board
 
 class Card(QStandardItem):
-    def __init__(self, name, rowid):
+    def __init__(self, name, rowid, idx):
         QStandardItem.__init__(self)
         self.itemType = 'CARD'
         self.name = name
-        self.rowid = rowid
+        self.rowid = int(rowid)
         self.setText(name)
+        self.idx = int(idx)
 
     def __str__(self):
-        return f'{self.itemType} {self.rowid} {self.name}'
+        return f'{self.itemType}::{self.rowid}::{self.idx}::{self.name}'
 
 
 class CardView(QListView):
@@ -109,8 +111,38 @@ class CardModel(QStandardItemModel):
         listidContainer.append(self.listId)
         return
 
+    def dropMimeData(self, data, action, row, column, parent):
+        result = False
+        if 'CARD' in data.text():
+            # A card being dropped in between cards
+            # TODO: Figure out how to handle reordering for cards in reversed order
+            '''
+            _, cardId, cardIdx, _ = data.text().split('::')
+            cardId, cardIdx = int(cardId), int(cardIdx)
+
+            print('row:', row)
+            print('cardIdx:', cardIdx)
+            if row == cardIdx or (row - 1) == cardIdx:
+                return True
+
+            if cardIdx > row:
+                newIdx = row
+            else:
+                newIdx = row - 1
+
+            cmd = f'shift-card {cardId} to {newIdx}'
+            print(cmd)
+            self.db.runCommand(cmd)
+            self.refresh()
+            '''
+            result = True
+        return result
+
     def mimeData(self, indexes):
         result = QMimeData()
         item = self.itemFromIndex(indexes[0])
-        result.setText(f'{item.itemType}={item.rowid}')
+        result.setText(str(item))
         return result
+
+    def mimeTypes(self):
+        return ['text/plain']

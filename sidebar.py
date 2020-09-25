@@ -36,8 +36,8 @@ def getBoards(db):
     boards = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            board = Board(row['title'], row['id'])
+        for idx, row in enumerate(reader):
+            board = Board(row['title'], row['id'], idx)
             boards.append(board)
     return boards
 
@@ -49,34 +49,36 @@ def getLists(db, boardId):
     lists = []
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            _list = List(row['title'], row['id'])
+        for idx, row in enumerate(reader):
+            _list = List(row['title'], row['id'], idx)
             lists.append(_list)
     return lists
 
 
 class Board(QStandardItem):
-    def __init__(self, name, rowid):
+    def __init__(self, name, rowid, idx):
         QStandardItem.__init__(self)
         self.itemType = 'BOARD'
         self.name = name
         self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
+        self.idx = int(idx)
 
     def __str__(self):
-        return f'{self.itemType} {self.rowid} {self.name}'
+        return f'{self.itemType}::{self.rowid}::{self.idx}::{self.name}'
 
 
 class List(QStandardItem):
-    def __init__(self, name, rowid):
+    def __init__(self, name, rowid, idx):
         QStandardItem.__init__(self)
         self.itemType = 'LIST'
         self.name = name
         self.rowid = int(rowid)
         self.setText(f'({rowid})  {name}')
+        self.idx = int(idx)
 
     def __str__(self):
-        return f'{self.itemType} {self.rowid} {self.name}'
+        return f'{self.itemType}::{self.rowid}::{self.idx}::{self.name}'
 
 
 class BoardContextMenu(QMenu):
@@ -280,30 +282,35 @@ class SidebarModel(QStandardItemModel):
         target = self.itemFromIndex(parent)
         result = False
         if type(target) == List and 'CARD' in data.text():
-            cardId = data.text().split('=')[-1]
+            # A card being dropped on a list
+            cardId = data.text().split('::')[1]
             cmd = f'move-card {cardId} to {target.rowid}'
             self.db.runCommand(cmd)
             self.cardChanged.emit()
             result = True
 
         elif type(target) == Board and 'LIST' in data.text():
-            '''
-            listId = data.text().split('=')[-1]
-            boardId = target.rowid
-            listIdxCurrent = data
-            cmd = f'move-card {cardId} to {target.rowid}'
+            # A list being dropped in between lists
+            # TODO: Take care of case where you drop from one board to another
+            _, listId, listIdx, _ = data.text().split('::')
+            listId, listIdx = int(listId), int(listIdx)
+
+            if row == listIdx or (row - 1) == listIdx:
+                return True
+
+            if listIdx > row:
+                newIdx = row
+            else:
+                newIdx = row - 1
+
+            cmd = f'shift-list {listId} to {newIdx}'
             self.db.runCommand(cmd)
-            self.cardChanged.emit()
-            '''
+            self.refresh()
             result = True
 
-        elif type(target) == None and 'BOARD' in data.text():
+        elif target is None and 'BOARD' in data.text():
+            # A board being dropped between boards
             result = True
-
-        print(target)
-        print(data.text())
-        print('row', row)
-        print('column', column)
 
         return result
 
@@ -348,5 +355,5 @@ class SidebarModel(QStandardItemModel):
     def mimeData(self, indexes):
         result = QMimeData()
         item = self.itemFromIndex(indexes[0])
-        result.setText(f'{item.itemType}={item.rowid}')
+        result.setText(str(item))
         return result

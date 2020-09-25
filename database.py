@@ -43,9 +43,9 @@ class Database:
             'move-card': self.moveCard,
             'move-list': self.moveList,
 
-            #'shift card': '',
-            #'shift list': '',
-            #'shift board': '',
+            'shift-card': self.shiftCard,
+            'shift-list': self.shiftList,
+            'shift-board': self.shiftBoard,
 
             'delete-card': self.delCard,
             'delete-list': self.delList,
@@ -213,7 +213,7 @@ class Database:
         boardId = match.group(2)
 
         # Get new index
-        newIdx = self.getMaxIdx('lists', 'title', boardId)
+        newIdx = self.getMaxIdx('lists', 'board', boardId)
 
         # Insert list into table
         values = (newListTitle, newIdx, boardId)
@@ -481,6 +481,106 @@ class Database:
             UPDATE lists
             SET board = {boardId}
             WHERE ROWID = {listId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def shiftCard(self, command):
+        '''
+        shift-card <cardid> to <index>
+        shift-card 123 to 0
+        '''
+        argPat = r'shift-card (\d+) to (\d+|-\d+)'
+        match = re.match(argPat, command)
+        cardId = match.group(1)
+        newIndex = int(match.group(2))
+
+        sql = f'''
+            SELECT idx, list FROM cards WHERE ROWID = {cardId}
+        '''
+        result = self.db.execute(sql).fetchone()
+        oldIndex = int(result[0])
+        listId = int(result[1])
+
+        sign = '-' if newIndex > oldIndex else '+'
+        sql = f'''
+            UPDATE cards SET idx = idx {sign} 1
+            WHERE {min(oldIndex, newIndex)} <= idx
+            AND idx <= {max(oldIndex, newIndex)}
+            AND list = {listId}
+        '''
+        self.db.execute(sql)
+
+        sql = f'''
+            UPDATE cards
+            SET idx = {newIndex}
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def shiftList(self, command):
+        '''
+        shift-list <listid> to <index>
+        shift-list 123 to 0
+        '''
+        argPat = r'shift-list (\d+) to (\d+|-\d+)'
+        match = re.match(argPat, command)
+        listId = match.group(1)
+        newIndex = int(match.group(2))
+
+        sql = f'''
+            SELECT idx, board FROM lists WHERE ROWID = {listId}
+        '''
+        result = self.db.execute(sql).fetchone()
+        oldIndex = int(result[0])
+        boardId = int(result[1])
+
+        sign = '-' if newIndex > oldIndex else '+'
+        sql = f'''
+            UPDATE lists SET idx = idx {sign} 1
+            WHERE {min(oldIndex, newIndex)} <= idx
+            AND idx <= {max(oldIndex, newIndex)}
+            AND board = {boardId}
+        '''
+        self.db.execute(sql)
+
+        sql = f'''
+            UPDATE lists
+            SET idx = {newIndex}
+            WHERE ROWID = {listId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def shiftBoard(self, command):
+        '''
+        shift-board <boardid> to <index>
+        shift-board 123 to 0
+        '''
+        argPat = r'shift-board (\d+) to (\d+|-\d+)'
+        match = re.match(argPat, command)
+        boardId = match.group(1)
+        newIndex = int(match.group(2))
+
+        sql = f'''
+            SELECT idx FROM boards WHERE ROWID = {boardId}
+        '''
+        result = self.db.execute(sql).fetchone()
+        oldIndex = int(result[0])
+
+        sign = '-' if newIndex > oldIndex else '+'
+        sql = f'''
+            UPDATE boards SET idx = idx {sign} 1
+            WHERE {min(oldIndex, newIndex)} <= idx
+            AND idx <= {max(oldIndex, newIndex)}
+        '''
+        self.db.execute(sql)
+
+        sql = f'''
+            UPDATE boards
+            SET idx = {newIndex}
+            WHERE ROWID = {boardId}
         '''
         self.db.execute(sql)
         return
