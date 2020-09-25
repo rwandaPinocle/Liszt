@@ -115,13 +115,10 @@ class CardModel(QStandardItemModel):
         result = False
         if 'CARD' in data.text():
             # A card being dropped in between cards
-            # TODO: Figure out how to handle reordering for cards in reversed order
-            '''
             _, cardId, cardIdx, _ = data.text().split('::')
             cardId, cardIdx = int(cardId), int(cardIdx)
+            row = self.rowCount() - row
 
-            print('row:', row)
-            print('cardIdx:', cardIdx)
             if row == cardIdx or (row - 1) == cardIdx:
                 return True
 
@@ -131,10 +128,8 @@ class CardModel(QStandardItemModel):
                 newIdx = row - 1
 
             cmd = f'shift-card {cardId} to {newIdx}'
-            print(cmd)
             self.db.runCommand(cmd)
             self.refresh()
-            '''
             result = True
         return result
 
