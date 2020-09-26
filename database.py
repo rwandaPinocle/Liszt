@@ -28,6 +28,12 @@ class Database:
             'add-board': self.addBoard,
             'add-button': self.addButton,
 
+            'set-content': self.setContent,
+            'get-content': self.getContent,
+            
+            'set-due-date': self.setDueDate,
+            'get-due-date': self.getDueDate,
+
             'show-cards': self.showCards,
             'show-lists': self.showLists,
             'show-boards': self.showBoards,
@@ -63,7 +69,11 @@ class Database:
             'CREATE TABLE boards (title text, idx integer)',
             'CREATE TABLE lists (title text, idx integer, board integer)',
             '''CREATE TABLE cards
-                (title text, idx integer, dueDate integer, list integer)''',
+                (title text,
+                 idx integer,
+                 dueDate integer,
+                 list integer,
+                 content text)''',
             'CREATE TABLE buttons (name text, command text, idx integer)',
             "INSERT INTO boards VALUES ('Personal', 0)",
             """INSERT INTO buttons VALUES
@@ -258,6 +268,74 @@ class Database:
         self.db.execute(sql)
         return
 
+    def setContent(self, command):
+        '''
+        set-content 123 to "content"
+        '''
+        pat = r'set-content (\d*) "(.*)"'
+        match = re.match(pat, command)
+        cardId = match.group(1)
+        content = match.group(2).strip('"')
+        content = content.replace('\t', ' '*4)
+        content = content.replace('\n', '<|NEWLINE|>')
+
+        sql = f'''
+            UPDATE cards
+            SET content = '{content}'
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def getContent(self, command):
+        '''
+        get-content 123
+        '''
+        pat = r'get-content (\d*)'
+        match = re.match(pat, command)
+        cardId = match.group(1)
+
+        sql = f'''
+            SELECT content
+            FROM cards
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def setDueDate(self, command):
+        '''
+        set-due-date 123 1234561234
+        '''
+        pat = r'set-due-date (\d*) (\d*)'
+        match = re.match(pat, command)
+        cardId = match.group(1)
+        dueDate = match.group(2).strip('"')
+
+        sql = f'''
+            UPDATE cards
+            SET dueDate = '{dueDate}'
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def getDueDate(self, command):
+        '''
+        get-due-date 123
+        '''
+        pat = r'get-due-date (\d*)'
+        match = re.match(pat, command)
+        cardId = match.group(1)
+
+        sql = f'''
+            SELECT dueDate
+            FROM cards
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
     def renameButton(self, command):
         '''
         rename-button 123 "Button title" "command"
@@ -346,16 +424,16 @@ class Database:
 
         # Get cards in the list
         sql = f'''
-            SELECT ROWID, title, dueDate
+            SELECT ROWID, title, dueDate, content
             FROM cards
             WHERE list={listId}
             ORDER BY idx ASC'''
         cards = self.db.execute(sql)
 
         # Show results
-        result = 'id\tdue\ttitle\n'
+        result = 'id\tdue\ttitle\tcontent\n'
         for card in cards:
-            result += f'{card[0]}\t{card[2]}\t{card[1]}\n'
+            result += f'{card[0]}\t{card[2]}\t{card[1]}\t{card[3]}\n'
         return result
 
     def showLists(self, command):
