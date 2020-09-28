@@ -192,6 +192,32 @@ class Database:
         newIdx = maxIdx + 1
         return newIdx
 
+    def reindex(self, table, field='', fieldVal=''):
+        if field and fieldVal:
+            sql = f'''
+                SELECT ROWID
+                FROM {table}
+                WHERE {field}={fieldVal}
+                ORDER BY idx ASC
+            '''
+        else:
+            sql = f'''
+                SELECT ROWID
+                FROM {table}
+                ORDER BY idx ASC
+            '''
+
+        rows = self.db.execute(sql)
+        for idx, row in enumerate(rows):
+            rowId = row[0]
+            sql = f'''
+                UPDATE {table}
+                SET idx = {idx}
+                WHERE ROWID = {rowId}
+            '''
+            self.db.execute(sql)
+        return
+
     def addCard(self, command):
         '''
         add-card "card title" to "list title"
@@ -573,12 +599,15 @@ class Database:
         cardId = match.group(1)
         newIndex = int(match.group(2))
 
-        sql = f'''
-            SELECT idx, list FROM cards WHERE ROWID = {cardId}
-        '''
+        sql = f'SELECT list FROM cards WHERE ROWID = {cardId}'
+        listId = self.db.execute(sql).fetchone()[0]
+
+        # Reindex card in case of corrupted indexes
+        self.reindex('cards', 'list', listId)
+
+        sql = f'SELECT idx FROM cards WHERE ROWID = {cardId}'
         result = self.db.execute(sql).fetchone()
         oldIndex = int(result[0])
-        listId = int(result[1])
 
         sign = '-' if newIndex > oldIndex else '+'
         sql = f'''
@@ -607,12 +636,17 @@ class Database:
         listId = match.group(1)
         newIndex = int(match.group(2))
 
+        sql = f'SELECT board FROM lists WHERE ROWID = {listId}'
+        boardId = self.db.execute(sql).fetchone()[0]
+
+        # Reindex lists in case of corrupted indexes
+        self.reindex('lists', 'board', boardId)
+
         sql = f'''
-            SELECT idx, board FROM lists WHERE ROWID = {listId}
+            SELECT idx FROM lists WHERE ROWID = {listId}
         '''
         result = self.db.execute(sql).fetchone()
         oldIndex = int(result[0])
-        boardId = int(result[1])
 
         sign = '-' if newIndex > oldIndex else '+'
         sql = f'''
@@ -640,6 +674,9 @@ class Database:
         match = re.match(argPat, command)
         boardId = match.group(1)
         newIndex = int(match.group(2))
+
+        # Reindex lists in case of corrupted indexes
+        self.reindex('boards')
 
         sql = f'''
             SELECT idx FROM boards WHERE ROWID = {boardId}
