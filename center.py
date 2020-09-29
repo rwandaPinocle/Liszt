@@ -32,6 +32,8 @@ from PySide2.QtCore import (
     Slot,
 )
 
+from database import decodeContent, encodeContent
+
 
 def getCards(db, listId):
     if listId == -1:
@@ -57,18 +59,19 @@ class Card(QStandardItem):
         QStandardItem.__init__(self)
         self.itemType = 'CARD'
         self.name = name
-        self.content = content.replace('<|NEWLINE|>', '\n')
+        self.content = decodeContent(content)
         self.dueDate = int(dueDate)
         self.rowid = int(rowid)
         self.setText(name)
         self.idx = int(idx)
-
 
     def __str__(self):
         return f'{self.itemType}::{self.rowid}::{self.idx}::{self.name}'
 
 
 class CardView(QListView):
+    showCard = Signal(Card)
+
     def __init__(self, db, parent=None):
         QListView.__init__(self)
         self.db = db
@@ -82,14 +85,13 @@ class CardView(QListView):
         self.setWordWrap(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setSpacing(7)
-        self.editDialog = CardEditWidget()
         self.doubleClicked.connect(self.onDoubleClick)
         return
 
     @Slot(QModelIndex)
     def onDoubleClick(self, index):
         card = self.model().itemFromIndex(index)
-        self.editDialog.showCard(card)
+        self.showCard.emit(card)
         return
 
     @Slot(list)
@@ -160,6 +162,15 @@ class CardModel(QStandardItemModel):
 
     def mimeTypes(self):
         return ['text/plain']
+
+    @Slot()
+    def onCardEdited(self, title, content, dueDate, cardId):
+        content = encodeContent(content)
+        self.db.runCommand(f'rename-card {cardId} "{title}"')
+        self.db.runCommand(f'set-card-content {cardId} "{content}"')
+        self.db.runCommand(f'set-due-date {cardId} {dueDate}')
+        self.refresh()
+        return
 
 
 class CardEditWidget(QDialog):
@@ -233,13 +244,13 @@ class CardEditWidget(QDialog):
         contentLabel.setStyleSheet('QLabel { color: #cccccc; };')
         contentLayout.addWidget(contentLabel)
 
-        contentEdit = QTextEdit()
-        contentEdit.setStyleSheet('''
+        self.contentEdit = QTextEdit()
+        self.contentEdit.setStyleSheet('''
             QTextEdit {
                 background-color: #2a2a2a;
                 color: #cccccc;
             }; ''')
-        contentLayout.addWidget(contentEdit)
+        contentLayout.addWidget(self.contentEdit)
         return contentLayout
 
     def makeButtonLayout(self):
@@ -266,17 +277,23 @@ class CardEditWidget(QDialog):
         buttonLayout.addWidget(cancelButton)
         return buttonLayout
 
+    @Slot(Card)
     def showCard(self, card):
         self.cardTitle = card.name
         self.nameTextEdit.setText(card.name)
         self.dueDate = card.dueDate
         self.content = card.content
+        self.contentEdit.setPlainText(card.content)
         self.cardId = card.rowid
         self.show()
         return
 
     @Slot()
     def handleSave(self):
-        print('handle save')
         self.close()
+        self.content = self.contentEdit.toPlainText()
+        self.cardTitle = self.nameTextEdit.text()
+        self.cardEdited.emit(
+                self.cardTitle, self.content,
+                self.dueDate, self.cardId)
         return
