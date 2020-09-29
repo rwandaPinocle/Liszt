@@ -34,7 +34,7 @@ from PySide2.QtGui import (
 from database import Database
 from sidebar import SidebarView, SidebarModel, Board, List
 from buttonTray import ButtonTray
-from center import CardView, CardModel
+from center import CardView, CardModel, CardEditWidget
 
 
 class NewCardTextBox(QLineEdit):
@@ -129,9 +129,12 @@ class MainWidget(QWidget):
 
     def setupCardView(self):
         self.cardModel = CardModel(self.db)
+        self.editDialog = CardEditWidget()
         self.cardView.setModel(self.cardModel)
         self.sidebarView.listClicked.connect(self.cardModel.showListCards)
         self.sidebarModel.cardChanged.connect(self.cardModel.refresh)
+        self.cardView.showCard.connect(self.editDialog.showCard)
+        self.editDialog.cardEdited.connect(self.cardModel.onCardEdited)
         self.sidebarView.expandAll()
         return
 

@@ -8,6 +8,17 @@ S_QUOTE = "'"
 D_QUOTE = '"'
 
 
+def encodeContent(content):
+    content = content.replace('\t', ' '*4)
+    content = content.replace('\n', '<|NEWLINE|>')
+    return content
+
+
+def decodeContent(content):
+    content = content.replace('<|NEWLINE|>', '\n')
+    return content
+
+
 class Database:
     def __init__(self, filename='data.db'):
         self.filename = filename
@@ -28,9 +39,9 @@ class Database:
             'add-board': self.addBoard,
             'add-button': self.addButton,
 
-            'set-content': self.setContent,
-            'get-content': self.getContent,
-            
+            'set-card-content': self.setCardContent,
+            'get-card-content': self.getCardContent,
+
             'set-due-date': self.setDueDate,
             'get-due-date': self.getDueDate,
 
@@ -294,11 +305,11 @@ class Database:
         self.db.execute(sql)
         return
 
-    def setContent(self, command):
+    def setCardContent(self, command):
         '''
-        set-content 123 to "content"
+        set-card-content 123 to "content"
         '''
-        pat = r'set-content (\d*) "(.*)"'
+        pat = r'set-card-content (\d*) "(.*)"'
         match = re.match(pat, command)
         cardId = match.group(1)
         content = match.group(2).strip('"')
@@ -313,11 +324,11 @@ class Database:
         self.db.execute(sql)
         return
 
-    def getContent(self, command):
+    def getCardContent(self, command):
         '''
-        get-content 123
+        get-card-content 123
         '''
-        pat = r'get-content (\d*)'
+        pat = r'get-card-content (\d*)'
         match = re.match(pat, command)
         cardId = match.group(1)
 
@@ -333,14 +344,14 @@ class Database:
         '''
         set-due-date 123 1234561234
         '''
-        pat = r'set-due-date (\d*) (\d*)'
+        pat = r'set-due-date (\d+) (\d+|-1)'
         match = re.match(pat, command)
         cardId = match.group(1)
-        dueDate = match.group(2).strip('"')
+        dueDate = match.group(2)
 
         sql = f'''
             UPDATE cards
-            SET dueDate = '{dueDate}'
+            SET dueDate = {dueDate}
             WHERE ROWID = {cardId}
         '''
         self.db.execute(sql)
