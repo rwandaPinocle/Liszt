@@ -125,11 +125,15 @@ class ListContextMenu(QMenu):
         ''')
 
 
-class RenameDialog(QInputDialog):
-    def __init__(self, labelText, parent=None):
+class RenameDeleteDialog(QInputDialog):
+    def __init__(self, parent=None):
         QInputDialog.__init__(self, parent=parent)
-        self.setInputMode(QInputDialog.TextInput)
-        self.setLabelText(labelText)
+        self.setStyleSheet('''
+                QInputDialog {
+                    background-color: #2e2e2e;
+                    color: #cccccc;
+                };
+                ''')
         return
 
     def showWithSuggestion(self, suggestion):
@@ -154,8 +158,8 @@ class SidebarView(QTreeView):
                     font-size: 14pt;
                     background-color: #2e2e2e;
                     color: #cccccc;
-                    min-width: 200px;
-                    max-width: 200px
+                    min-width: 250px;
+                    max-width: 250px
                 };
                 ''')
 
@@ -164,8 +168,8 @@ class SidebarView(QTreeView):
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setWordWrap(True)
 
-        self.renameListDialog = RenameDialog('New List Name')
-        self.renameBoardDialog = RenameDialog('New Board Name')
+        self.inputDialog = RenameDeleteDialog()
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         self.setupContextMenus()
         return
@@ -198,7 +202,7 @@ class SidebarView(QTreeView):
         item = listIndex.model().itemFromIndex(listIndex)
         titleText = "Rename List"
         labelText = "New Name:"
-        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        newName, ok = self.inputDialog.getText(self, titleText, labelText)
         if ok:
             self.renameList.emit(newName, int(item.rowid))
         return
@@ -209,7 +213,7 @@ class SidebarView(QTreeView):
         item = listIndex.model().itemFromIndex(listIndex)
         titleText = "Delete List"
         labelText = f'To delete, type "{item.name}"'
-        confirm, ok = QInputDialog().getText(self, titleText, labelText)
+        confirm, ok = self.inputDialog.getText(self, titleText, labelText)
         if ok and confirm == item.name:
             self.deleteList.emit(item.rowid)
         return
@@ -220,7 +224,7 @@ class SidebarView(QTreeView):
         item = boardIndex.model().itemFromIndex(boardIndex)
         titleText = "Rename Board"
         labelText = "New Name:"
-        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        newName, ok = self.inputDialog.getText(self, titleText, labelText)
         if ok:
             self.renameBoard.emit(newName, item.rowid)
         return
@@ -231,7 +235,7 @@ class SidebarView(QTreeView):
         item = boardIndex.model().itemFromIndex(boardIndex)
         titleText = "Delete Board"
         labelText = f'To delete, type "{item.name}"'
-        confirm, ok = QInputDialog().getText(self, titleText, labelText)
+        confirm, ok = self.inputDialog.getText(self, titleText, labelText)
         if ok and confirm == item.name:
             self.deleteBoard.emit(item.rowid)
         return
@@ -242,7 +246,7 @@ class SidebarView(QTreeView):
         item = boardIndex.model().itemFromIndex(boardIndex)
         titleText = "New List"
         labelText = "Name:"
-        newName, ok = QInputDialog().getText(self, titleText, labelText)
+        newName, ok = self.inputDialog.getText(self, titleText, labelText)
         if ok:
             self.addList.emit(newName, item.rowid)
         return

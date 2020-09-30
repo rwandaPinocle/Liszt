@@ -8,13 +8,14 @@ S_QUOTE = "'"
 D_QUOTE = '"'
 
 
-def encodeContent(content):
+def encodeForDB(content):
     content = content.replace('\t', ' '*4)
     content = content.replace('\n', '<|NEWLINE|>')
+    content = content.replace(S_QUOTE, S_QUOTE*2)
     return content
 
 
-def decodeContent(content):
+def decodeFromDB(content):
     content = content.replace('<|NEWLINE|>', '\n')
     return content
 

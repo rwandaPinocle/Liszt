@@ -32,7 +32,7 @@ from PySide2.QtCore import (
     Slot,
 )
 
-from database import decodeContent, encodeContent
+from database import decodeFromDB, encodeForDB
 
 
 def getCards(db, listId):
@@ -59,7 +59,7 @@ class Card(QStandardItem):
         QStandardItem.__init__(self)
         self.itemType = 'CARD'
         self.name = name
-        self.content = decodeContent(content)
+        self.content = decodeFromDB(content)
         self.dueDate = int(dueDate)
         self.rowid = int(rowid)
         self.setText(name)
@@ -135,7 +135,6 @@ class CardModel(QStandardItemModel):
     def dropMimeData(self, data, action, row, column, parent):
         result = False
         if 'CARD' in data.text():
-            # A card being dropped in between cards
             _, cardId, cardIdx, _ = data.text().split('::')
             cardId, cardIdx = int(cardId), int(cardIdx)
             row = self.rowCount() - row
@@ -165,7 +164,8 @@ class CardModel(QStandardItemModel):
 
     @Slot()
     def onCardEdited(self, title, content, dueDate, cardId):
-        content = encodeContent(content)
+        title = encodeForDB(title)
+        content = encodeForDB(content)
         self.db.runCommand(f'rename-card {cardId} "{title}"')
         self.db.runCommand(f'set-card-content {cardId} "{content}"')
         self.db.runCommand(f'set-due-date {cardId} {dueDate}')
