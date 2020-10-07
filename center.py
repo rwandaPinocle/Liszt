@@ -1,5 +1,6 @@
 import io
 import csv
+import datetime
 
 from PySide2.QtWidgets import (
     QApplication,
@@ -54,6 +55,7 @@ def getCards(db, listId):
 
 # TODO: Create a json serialization of Card, List, and Board
 
+
 class Card(QStandardItem):
     def __init__(self, name, rowid, idx, content, dueDate):
         QStandardItem.__init__(self)
@@ -62,7 +64,13 @@ class Card(QStandardItem):
         self.content = decodeFromDB(content)
         self.dueDate = int(dueDate)
         self.rowid = int(rowid)
-        self.setText(name)
+        suffix = '\n  '
+        if self.content:
+            suffix += 'Includes content\t'
+        if self.dueDate != -1:
+            dateInfo = datetime.fromtimestamp(dueDate)
+            suffix += 'Due:' + dateInfo.strftime('%A, %d %b %Y')
+        self.setText(name + suffix)
         self.idx = int(idx)
 
     def __str__(self):
