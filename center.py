@@ -80,11 +80,14 @@ class CardView(QListView):
                     font-size: 16pt;
                     background-color: #2e2e2e;
                     color: #cccccc;
-                };
+                }
+
+                QListView::item {
+                     padding: 7px;
+                }
                 ''')
         self.setWordWrap(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setSpacing(7)
         self.doubleClicked.connect(self.onDoubleClick)
         return
 
@@ -152,6 +155,11 @@ class CardModel(QStandardItemModel):
             self.refresh()
             result = True
         return result
+
+    def canDropMimeData(self, data, action, row, col, parent):
+        isCard = 'CARD' in data.text()
+        isBetweenCards = (row != -1 and self.itemFromIndex(parent) is None)
+        return (isCard and isBetweenCards)
 
     def mimeData(self, indexes):
         result = QMimeData()

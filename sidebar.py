@@ -61,7 +61,7 @@ class Board(QStandardItem):
         self.itemType = 'BOARD'
         self.name = name
         self.rowid = int(rowid)
-        self.setText(f'({rowid})  {name}')
+        self.setText(f'[id:{rowid}]  {name}')
         self.idx = int(idx)
 
     def __str__(self):
@@ -74,7 +74,7 @@ class List(QStandardItem):
         self.itemType = 'LIST'
         self.name = name
         self.rowid = int(rowid)
-        self.setText(f'({rowid})  {name}')
+        self.setText(f'[id:{rowid}]  {name}')
         self.idx = int(idx)
 
     def __str__(self):
@@ -160,7 +160,11 @@ class SidebarView(QTreeView):
                     color: #cccccc;
                     min-width: 250px;
                     max-width: 250px
-                };
+                }
+
+                QTreeView::item {
+                    padding: 5px;
+                }
                 ''')
 
         self.header().hide()
@@ -317,6 +321,22 @@ class SidebarModel(QStandardItemModel):
             result = True
 
         return result
+
+    def canDropMimeData(self, data, action, row, col, parent):
+        target = self.itemFromIndex(parent)
+        isCard = 'CARD' in data.text()
+        isBetweenCards = (type(target) == List and col == -1)
+
+        isList = 'LIST' in data.text()
+        isBetweenLists = (type(target) == Board and col == 0)
+
+        isBoard = 'BOARD' in data.text()
+        isBetweenBoards = (target is None and col == 0)
+
+        valid = (isCard and isBetweenCards)
+        valid = valid or (isList and isBetweenLists)
+        valid = valid or (isBoard and isBetweenBoards)
+        return valid
 
     def mimeTypes(self):
         return ['text/plain']
