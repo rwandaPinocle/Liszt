@@ -2,6 +2,7 @@ import json
 import re
 import sqlite3
 import os
+import time
 # TODO: Add support for letter hash ids
 
 S_QUOTE = "'"
@@ -45,6 +46,7 @@ class Database:
 
             'set-due-date': self.setDueDate,
             'get-due-date': self.getDueDate,
+            'set-due-in': self.setDueIn,
 
             'show-cards': self.showCards,
             'show-lists': self.showLists,
@@ -336,6 +338,35 @@ class Database:
         sql = f'''
             SELECT content
             FROM cards
+            WHERE ROWID = {cardId}
+        '''
+        self.db.execute(sql)
+        return
+
+    def setDueIn(self, command):
+        '''
+        set-due-in 123 12d/w/m/y
+        '''
+        pat = r'set-due-in (\d+) (\d+d|\d+w|\d+m|\d+y)'
+        match = re.match(pat, command)
+        cardId = match.group(1)
+        interval = match.group(2)
+
+        num = int(interval[:-1])
+        unit = interval[-1]
+
+        coefMap = {
+            'd': 24*60*60,
+            'w': 24*60*60*7,
+            'm': 24*60*60*30,
+            'y': 24*60*60*365,
+        }
+        coef = coefMap[unit]
+        dueDate = (num*coef) + int(time.time())
+
+        sql = f'''
+            UPDATE cards
+            SET dueDate = {dueDate}
             WHERE ROWID = {cardId}
         '''
         self.db.execute(sql)
