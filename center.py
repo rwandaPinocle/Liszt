@@ -64,12 +64,12 @@ class Card(QStandardItem):
         self.content = decodeFromDB(content)
         self.dueDate = int(dueDate)
         self.rowid = int(rowid)
-        suffix = '\n  '
+        suffix = ''
         if self.content:
-            suffix += 'Includes content\t'
+            suffix += ' *'
         if self.dueDate != -1:
             dateInfo = datetime.fromtimestamp(dueDate)
-            suffix += 'Due:' + dateInfo.strftime('%A, %d %b %Y')
+            suffix += '\tDue:' + dateInfo.strftime('%A, %d %b %Y')
         self.setText(name + suffix)
         self.idx = int(idx)
 

@@ -471,7 +471,7 @@ class Database:
         # Show results
         result = 'id\tdue\ttitle\tcontent\n'
         for card in cards:
-            result += f'{card[0]}\t{card[2]}\t{card[1]}\t{card[3]}\n'
+            result += f'{card[0]}\t{card[2]}\t{card[1]}\t{card[3] or ""}\n'
         return result
 
     def showLists(self, command):
