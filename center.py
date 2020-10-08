@@ -78,8 +78,8 @@ class Card(QStandardItem):
         if self.content:
             suffix += ' *'
         if self.dueDate > 0:
-            dateInfo = datetime.fromtimestamp(dueDate)
-            suffix += '\tDue: ' + dateInfo.strftime('%A, %d %b %Y')
+            dateInfo = datetime.datetime.fromtimestamp(dueDate)
+            suffix += f" (Due: {dateInfo.strftime('%A, %d %b %Y')})"
         self.setText(name + suffix)
         self.idx = int(idx)
 
