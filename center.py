@@ -18,6 +18,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QTextEdit,
     QPushButton,
+    QCalendarWidget,
 )
 from PySide2.QtGui import (
     Qt,
@@ -29,6 +30,8 @@ from PySide2.QtCore import (
     QMimeData,
     QByteArray,
     QModelIndex,
+    QDate,
+    Qt,
     Signal,
     Slot,
 )
@@ -46,12 +49,19 @@ def getCards(db, listId):
         for idx, row in enumerate(reader):
             card = Card(
                 row['title'],
-                row['id'],
+                int(row['id']),
                 idx,
                 row['content'],
-                row['due'])
+                int(row['due']))
             cards.append(card)
     return cards
+
+
+def toLocalTime(sec):
+    # Seconds since epoch to local time
+    dateInfo = datetime.datetime.fromtimestamp(sec)
+    result = dateInfo.strftime('%A, %d %b %Y')
+    return result
 
 # TODO: Create a json serialization of Card, List, and Board
 
@@ -67,9 +77,9 @@ class Card(QStandardItem):
         suffix = ''
         if self.content:
             suffix += ' *'
-        if self.dueDate != -1:
+        if self.dueDate > 0:
             dateInfo = datetime.fromtimestamp(dueDate)
-            suffix += '\tDue:' + dateInfo.strftime('%A, %d %b %Y')
+            suffix += '\tDue: ' + dateInfo.strftime('%A, %d %b %Y')
         self.setText(name + suffix)
         self.idx = int(idx)
 
@@ -240,18 +250,46 @@ class CardEditWidget(QDialog):
         return nameLayout
 
     def makeDueDateLayout(self):
-        dueDateLayout = QHBoxLayout()
+        dueDateLayout = QVBoxLayout()
+        rowLayout = QHBoxLayout()
         dateLabel = QLabel('Due Date:')
         dateLabel.setStyleSheet('QLabel { color: #cccccc; };')
-        dueDateLayout.addWidget(dateLabel)
+        rowLayout.addWidget(dateLabel)
         dateLineEdit = QLineEdit()
         dateLineEdit.setStyleSheet('''
             QLineEdit {
                 background-color: #2a2a2a;
                 color: #cccccc;
             }; ''')
+        if self.dueDate > 0:
+            dateLineEdit.setText(toLocalTime(self.dueDate))
+        else:
+            dateLineEdit.setText('None')
+        self.dateLineEdit = dateLineEdit
 
-        dueDateLayout.addWidget(dateLineEdit)
+        calWidget = QCalendarWidget()
+        calWidget.setStyleSheet('''
+            QCalendarWidget QWidget {
+                background-color: #2a2a2a;
+                alternate-background-color: #303030;
+                color: #cccccc;
+            }
+            QCalendarWidget QToolButton {
+                background-color: #2a2a2a;
+                alternate-background-color: #303030;
+                color: #cccccc;
+            }
+            QCalendarWidget QAbstractItemView {
+                background-color: #2a2a2a;
+                alternate-background-color: #303030;
+                color: #cccccc;
+            } ''')
+        calWidget.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
+        calWidget.clicked.connect(self.onCalendarClick)
+
+        rowLayout.addWidget(dateLineEdit)
+        dueDateLayout.addLayout(rowLayout)
+        dueDateLayout.addWidget(calWidget)
         return dueDateLayout
 
     def makeContentLayout(self):
@@ -298,6 +336,10 @@ class CardEditWidget(QDialog):
         self.cardTitle = card.name
         self.nameTextEdit.setText(card.name)
         self.dueDate = card.dueDate
+        if self.dueDate > 0:
+            self.dateLineEdit.setText(toLocalTime(self.dueDate))
+        else:
+            self.dateLineEdit.setText('None')
         self.content = card.content
         self.contentEdit.setPlainText(card.content)
         self.cardId = card.rowid
@@ -313,3 +355,9 @@ class CardEditWidget(QDialog):
                 self.cardTitle, self.content,
                 self.dueDate, self.cardId)
         return
+
+    @Slot(QDate)
+    def onCalendarClick(self, date):
+        dateInfo = date.startOfDay(Qt.TimeSpec.LocalTime)
+        self.dueDate = dateInfo.toSecsSinceEpoch()
+        self.dateLineEdit.setText(toLocalTime(self.dueDate))
