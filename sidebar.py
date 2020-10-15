@@ -61,7 +61,7 @@ class Board(QStandardItem):
         self.itemType = 'BOARD'
         self.name = name
         self.rowid = int(rowid)
-        self.setText(f'[id:{rowid}]  {name}')
+        self.setText(f'#{rowid}  {name}')
         self.idx = int(idx)
 
     def __str__(self):
@@ -74,7 +74,7 @@ class List(QStandardItem):
         self.itemType = 'LIST'
         self.name = name
         self.rowid = int(rowid)
-        self.setText(f'[id:{rowid}]  {name}')
+        self.setText(f'#{rowid}  {name}')
         self.idx = int(idx)
 
     def __str__(self):
