@@ -47,6 +47,7 @@ class Database:
             'set-due-date': self.setDueDate,
             'get-due-date': self.getDueDate,
             'set-due-in': self.setDueIn,
+            'move-due-cards': self.moveDueCards,
 
             'show-cards': self.showCards,
             'show-lists': self.showLists,
@@ -404,6 +405,27 @@ class Database:
         '''
         self.db.execute(sql)
         return
+
+    def moveDueCards(self, command):
+        '''
+        move-due-cards 123,123,123 123
+        '''
+        pat = r'move-due-cards ([\d,]+) (\d+)'
+        match = re.match(pat, command)
+        sourceListIds = match.group(1)
+        destListId = match.group(2)
+        today = int(time.time())
+
+        sql = f'''
+            UPDATE cards
+            SET list = {destListId}
+            WHERE list IN ({sourceListIds})
+            AND dueDate < {today}
+            AND dueDate > 0
+        '''
+        self.db.execute(sql)
+        self.reindex('cards', 'list', destListId)
+        return 
 
     def renameButton(self, command):
         '''
