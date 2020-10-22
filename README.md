@@ -1,6 +1,7 @@
 
 # Liszt
 ![license](https://img.shields.io/badge/license-GPL%203.0-brightgreen)
+
 Liszt is a slick and efficient tool for keeping lists.
 Intended as a replacement for Trello, you can set due dates, attach info to cards, and even automate tasks at the push of a button!
 GUI is made with Qt using Pyside2 and all data is stored in a single Sqlite3 db file.
