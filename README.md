@@ -9,13 +9,13 @@ GUI is made with Qt using Pyside2 and all data is stored in a single Sqlite3 db 
 
 # Features
 ## Create and move cards
-![create cards](https://github.com/adpolican/Liszt/raw/master/gifs/liszt_add_and_move.gif)
+![create cards](https://github.com/rwandaPinocle/Liszt/raw/master/gifs/liszt_add_and_move.gif)
 
 ## Set due dates and add details
-![set due dates and add details](https://github.com/adpolican/Liszt/raw/master/gifs/liszt_modify_tasks.gif)
+![set due dates and add details](https://github.com/rwandaPinocle/Liszt/raw/master/gifs/liszt_modify_tasks.gif)
 
 ## Automate tasks with command buttons
-![automate tasks with buttons](https://github.com/adpolican/Liszt/raw/master/gifs/liszt_buttons.gif)
+![automate tasks with buttons](https://github.com/rwandaPincole/Liszt/raw/master/gifs/liszt_buttons.gif)
 
 # Requirements
 The only dependency is Qt via Pyside2.
