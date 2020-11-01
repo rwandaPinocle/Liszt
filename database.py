@@ -614,8 +614,8 @@ class Database:
         move-card 123 to "list title"
         move-card 123 to "list title" in "board title"
         move-card 123 to 132
-        move-card 123 to next
-        move-card 123 to prev
+        move-card 123 to "next"
+        move-card 123 to "prev"
         '''
         argPat = r'move-card (?P<cardStr>".+"|\d+)'
         argPat += r' to (?P<listDstStr>".+"|\d+)'
