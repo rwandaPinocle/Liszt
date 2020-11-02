@@ -8,7 +8,7 @@ GUI is made with Qt using Pyside2 and all data is stored in a single Sqlite3 db 
 
 To run, just type
 ```
-python main.py
+python3 main.py
 ```
 
 # Features
