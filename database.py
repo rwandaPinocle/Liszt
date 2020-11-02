@@ -92,7 +92,7 @@ class Database:
             'CREATE TABLE buttons (name text, command text, idx integer)',
             "INSERT INTO boards VALUES ('Personal', 0)",
             """INSERT INTO buttons VALUES
-                ('Delete card', 'delete card $CARD', 0)""",
+                ('Delete card', 'delete-card $CARD', 0)""",
             "INSERT INTO lists VALUES ('To do', 0, 1)",
             "INSERT INTO lists VALUES ('Doing', 1, 1)",
             "INSERT INTO lists VALUES ('Done', 2, 1)",
@@ -614,6 +614,8 @@ class Database:
         move-card 123 to "list title"
         move-card 123 to "list title" in "board title"
         move-card 123 to 132
+        move-card 123 to "next"
+        move-card 123 to "prev"
         '''
         argPat = r'move-card (?P<cardStr>".+"|\d+)'
         argPat += r' to (?P<listDstStr>".+"|\d+)'
@@ -626,8 +628,14 @@ class Database:
             boardId = self.getBoardId(match.group('boardStr'))
         else:
             boardId = self.getCurrentBoardId()
-
-        listDstId = self.getListId(match.group('listDstStr'), boardId)
+        if 'next' in match.group('listDstStr'):
+            sql = f'SELECT list FROM cards WHERE ROWID = {cardId}'
+            listDstId = self.db.execute(sql).fetchone()[0] + 1
+        elif 'prev' in match.group('listDstStr'):
+            sql = f'SELECT list FROM cards WHERE ROWID = {cardId}'
+            listDstId = self.db.execute(sql).fetchone()[0] - 1
+        else:
+            listDstId = self.getListId(match.group('listDstStr'), boardId)
         sql = f'''
             UPDATE cards
             SET list = {listDstId}
