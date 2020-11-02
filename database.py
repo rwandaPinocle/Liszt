@@ -611,7 +611,7 @@ class Database:
 
     def listsInBoard(self, boardId):
         sql = f'''SELECT ROWID FROM lists
-                WHERE board = {boardId} ORDER BY ROWID ASC'''
+                WHERE board = {boardId} ORDER BY idx ASC'''
         listsInBoard = [r[0] for r in self.db.execute(sql)]
         return listsInBoard
 
