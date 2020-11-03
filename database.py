@@ -609,16 +609,22 @@ class Database:
         command = self.db.execute(sql).fetchone()[0]
         return command
 
+    def listsInBoard(self, boardId):
+        sql = f'''SELECT ROWID FROM lists
+                WHERE board = {boardId} ORDER BY idx ASC'''
+        listsInBoard = [r[0] for r in self.db.execute(sql)]
+        return listsInBoard
+
     def moveCard(self, command):
         '''
         move-card 123 to "list title"
         move-card 123 to "list title" in "board title"
         move-card 123 to 132
-        move-card 123 to "next"
-        move-card 123 to "prev"
+        move-card 123 to next
+        move-card 123 to prev
         '''
         argPat = r'move-card (?P<cardStr>".+"|\d+)'
-        argPat += r' to (?P<listDstStr>".+"|\d+)'
+        argPat += r' to (?P<listDstStr>".+"|\d+|next|prev)'
         argPat += r'(?: in (?P<boardStr>".+"|\d+))?'
         match = re.match(argPat, command)
 
@@ -628,12 +634,25 @@ class Database:
             boardId = self.getBoardId(match.group('boardStr'))
         else:
             boardId = self.getCurrentBoardId()
+
         if 'next' in match.group('listDstStr'):
             sql = f'SELECT list FROM cards WHERE ROWID = {cardId}'
-            listDstId = self.db.execute(sql).fetchone()[0] + 1
+            currentListId = self.db.execute(sql).fetchone()[0]
+            listsInBoard = self.listsInBoard(boardId)
+
+            listIdx = listsInBoard.index(currentListId)
+            nextListIdx = min(listIdx + 1, len(listsInBoard) - 1)
+            listDstId = listsInBoard[nextListIdx]
+
         elif 'prev' in match.group('listDstStr'):
             sql = f'SELECT list FROM cards WHERE ROWID = {cardId}'
-            listDstId = self.db.execute(sql).fetchone()[0] - 1
+            currentListId = self.db.execute(sql).fetchone()[0]
+            listsInBoard = self.listsInBoard(boardId)
+
+            listIdx = listsInBoard.index(currentListId)
+            prevListIdx = max(listIdx - 1, 0)
+            listDstId = listsInBoard[prevListIdx]
+
         else:
             listDstId = self.getListId(match.group('listDstStr'), boardId)
         sql = f'''
