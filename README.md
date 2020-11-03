@@ -25,7 +25,7 @@ python3 main.py
 The only dependency is Qt via Pyside2.
 You can install with 
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 
