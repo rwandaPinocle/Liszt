@@ -158,7 +158,7 @@ class SidebarView(QTreeView):
                     font-size: 14pt;
                     background-color: #2e2e2e;
                     color: #cccccc;
-                    min-width: 250px;
+                    min-width: 125px;
                     max-width: 250px
                 }
 
