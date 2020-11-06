@@ -180,6 +180,6 @@ if __name__ == "__main__":
     app = QApplication([])
     db = Database()
     mainWin = LisztWindow(db)
-    mainWin.setFixedSize(1200, 800)
+    mainWin.resize(1200, 800)
     mainWin.show()
     sys.exit(app.exec_())
