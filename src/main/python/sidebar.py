@@ -29,6 +29,7 @@ from PySide2.QtCore import (
     Signal,
     Slot,
 )
+from database import encodeForDB, decodeFromDB
 
 
 def getBoards(db):
@@ -50,7 +51,7 @@ def getLists(db, boardId):
     with io.StringIO(result) as f:
         reader = csv.DictReader(f, delimiter='\t')
         for idx, row in enumerate(reader):
-            _list = List(row['title'], row['id'], idx)
+            _list = List(decodeFromDB(row['title']), row['id'], idx)
             lists.append(_list)
     return lists
 
@@ -59,7 +60,7 @@ class Board(QStandardItem):
     def __init__(self, name, rowid, idx):
         QStandardItem.__init__(self)
         self.itemType = 'BOARD'
-        self.name = name
+        self.name = decodeFromDB(name)
         self.rowid = int(rowid)
         self.setText(f'#{rowid}  {name}')
         self.idx = int(idx)
@@ -72,7 +73,7 @@ class List(QStandardItem):
     def __init__(self, name, rowid, idx):
         QStandardItem.__init__(self)
         self.itemType = 'LIST'
-        self.name = name
+        self.name = decodeFromDB(name)
         self.rowid = int(rowid)
         self.setText(f'#{rowid}  {name}')
         self.idx = int(idx)

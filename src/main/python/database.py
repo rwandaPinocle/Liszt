@@ -18,6 +18,7 @@ def encodeForDB(content):
 
 def decodeFromDB(content):
     content = content.replace('<|NEWLINE|>', '\n')
+    content = content.replace(S_QUOTE*2, S_QUOTE)
     return content
 
 
@@ -107,7 +108,6 @@ class Database:
         '''
         Executes a command on the datatree
         '''
-        print('Running command:', cmd)
         items = self.actions.items()
         op = next(func for verb, func in items if cmd.startswith(verb))
 
@@ -140,6 +140,36 @@ class Database:
         self.boardIdx = idx
         return f'Current board: {title}'
 
+    def getAllBoardIds(self):
+        sql = 'SELECT ROWID FROM boards'
+        boardIds = [i[0] for i in self.db.execute(sql)]
+        return boardIds 
+
+    def getAllListIds(self):
+        sql = 'SELECT ROWID FROM lists'
+        listIds = [i[0] for i in self.db.execute(sql)]
+        return listIds 
+
+    def cullOrphans(self):
+        boardIds = self.getAllBoardIds()
+        boardIdStr = ','.join(str(bid) for bid in boardIds)
+        boardIdStr = f'({boardIdStr})'
+        sql = f'''
+            DELETE FROM lists
+            WHERE board NOT IN {boardIdStr}
+        '''
+        self.db.execute(sql)
+
+        listIds = self.getAllListIds()
+        listIdStr = ','.join(str(bid) for bid in listIds)
+        listIdStr = f'({listIdStr})'
+        sql = f'''
+            DELETE FROM cards
+            WHERE list NOT IN {listIdStr}
+        '''
+        self.db.execute(sql)
+        return
+
     def getCurrentBoardId(self):
         '''
         current-board-id
@@ -154,7 +184,7 @@ class Database:
             boardId = self.getCurrentBoardId()
 
         if D_QUOTE in listStr:
-            listTitle = listStr.strip(D_QUOTE)
+            listTitle = encodeForDB(listStr.strip(D_QUOTE))
             sql = f'''
                 SELECT ROWID
                 FROM lists
@@ -235,22 +265,28 @@ class Database:
 
     def addCard(self, command):
         '''
-        add-card "card title" to "list title"
+        add-card "card title":"description":123 to 123
+        add-card "card title":"description":123 to "list title"
         '''
         # Get card title and list title
-        pat = r'add-card "(.*)" to (".*"|.*)'
+        pat = r'add-card "(.*)":"(.*)":([\d-]*) to (".*"|.*)'
         match = re.match(pat, command)
         cardTitle = match.group(1)
-        listStr = match.group(2)
+        descStr = match.group(2)
+        dueDate = match.group(3)
+        listStr = match.group(4)
 
         # Get new index
         listId = self.getListId(listStr)
         newIdx = self.getMaxIdx('cards', 'list', listId)
 
         # Insert list into table
-        values = (cardTitle, newIdx, -1, listId)
-        sql = f'INSERT INTO cards(title, idx, dueDate, list) VALUES {values}'
-        self.db.execute(sql)
+        values = (cardTitle, newIdx, dueDate, listId, descStr)
+        sql = '''
+            INSERT INTO cards(title, idx, dueDate, list, content)
+            VALUES (?, ?, ?, ?, ?)
+        '''
+        self.db.execute(sql, values)
         return
 
     def addList(self, command):
@@ -408,9 +444,9 @@ class Database:
 
     def moveDueCards(self, command):
         '''
-        move-due-cards 123,123,123 123
+        move-due-cards 123,123,123 to 123
         '''
-        pat = r'move-due-cards ([\d,]+) (\d+)'
+        pat = r'move-due-cards ([\d,]+) to (\d+)'
         match = re.match(pat, command)
         sourceListIds = match.group(1)
         destListId = match.group(2)
@@ -818,6 +854,7 @@ class Database:
             WHERE ROWID = {listId}
         '''
         self.db.execute(sql)
+        self.cullOrphans()
         return
 
     def delBoard(self, command):
@@ -832,6 +869,7 @@ class Database:
             WHERE ROWID = {boardId}
         '''
         self.db.execute(sql)
+        self.cullOrphans()
         return
 
     def delButton(self, command):

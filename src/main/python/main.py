@@ -3,6 +3,7 @@ import sys
 import csv
 import io
 
+from fbs_runtime.application_context.PySide2 import ApplicationContext
 from PySide2.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -151,7 +152,7 @@ class MainWidget(QWidget):
 
     @Slot(str, int)
     def makeNewCard(self, text, listid):
-        self.db.runCommand(f'add-card "{text}" to {listid}')
+        self.db.runCommand(f'add-card "{text}":"":-1 to {listid}')
         return
 
     @Slot()
@@ -177,9 +178,9 @@ class LisztWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    app = QApplication([])
+    appctxt = ApplicationContext()
     db = Database()
     mainWin = LisztWindow(db)
     mainWin.resize(1200, 800)
     mainWin.show()
-    sys.exit(app.exec_())
+    sys.exit(appctxt.app.exec_())

@@ -70,7 +70,7 @@ class Card(QStandardItem):
     def __init__(self, name, rowid, idx, content, dueDate):
         QStandardItem.__init__(self)
         self.itemType = 'CARD'
-        self.name = name
+        self.name = decodeFromDB(name)
         self.content = decodeFromDB(content)
         self.dueDate = int(dueDate)
         self.rowid = int(rowid)
@@ -80,7 +80,7 @@ class Card(QStandardItem):
         if self.dueDate > 0:
             dateInfo = datetime.datetime.fromtimestamp(dueDate)
             suffix += f" (Due: {dateInfo.strftime('%A, %d %b %Y')})"
-        self.setText(name + suffix)
+        self.setText(self.name + suffix)
         self.idx = int(idx)
 
     def __str__(self):
@@ -101,7 +101,7 @@ class CardView(QListView):
                 }
 
                 QListView::item {
-                     padding: 7px;
+                     padding: 10px;
                 }
                 ''')
         self.setWordWrap(True)
