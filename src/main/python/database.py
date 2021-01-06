@@ -691,9 +691,13 @@ class Database:
 
         else:
             listDstId = self.getListId(match.group('listDstStr'), boardId)
+
+        self.reindex('cards', 'list', listDstId)
+        newIdx = self.getMaxIdx('cards', 'list', listDstId)
         sql = f'''
             UPDATE cards
-            SET list = {listDstId}
+            SET list = {listDstId},
+                idx = {newIdx}
             WHERE ROWID = {cardId}
         '''
         self.db.execute(sql)
