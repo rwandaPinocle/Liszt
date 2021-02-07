@@ -126,12 +126,21 @@ class MainWidget(QWidget):
         self.sidebarView.deleteList.connect(self.sidebarModel.onDeleteList)
         self.sidebarView.deleteBoard.connect(self.sidebarModel.onDeleteBoard)
         self.sidebarView.addList.connect(self.sidebarModel.onAddList)
+        self.sidebarModel.willRefresh.connect(self.sidebarView.storeExpanded)
+        self.sidebarModel.willRefresh.connect(self.sidebarView.storeScrollValue)
+        self.sidebarModel.refreshed.connect(self.sidebarView.restoreExpanded)
+        self.sidebarModel.refreshed.connect(self.sidebarView.restoreScrollValue)
+        
         return
 
     def setupCardView(self):
         self.cardModel = CardModel(self.db)
         self.editDialog = CardEditWidget()
         self.cardView.setModel(self.cardModel)
+        self.cardModel.willUpdateCurrentList.connect(self.cardView.storeScrollValue)
+        self.cardModel.willUpdateCurrentList.connect(self.cardView.storeSelectedIndex)
+        self.cardModel.updatedCurrentList.connect(self.cardView.restoreScrollValue)
+        self.cardModel.updatedCurrentList.connect(self.cardView.restoreSelectedIndex)
         self.sidebarView.listClicked.connect(self.cardModel.showListCards)
         self.sidebarModel.cardChanged.connect(self.cardModel.refresh)
         self.cardView.showCard.connect(self.editDialog.showCard)

@@ -68,6 +68,9 @@ class Board(QStandardItem):
     def __str__(self):
         return f'{self.itemType}::{self.rowid}::{self.idx}::{self.name}'
 
+    def __hash__(self):
+        return self.rowid
+
 
 class List(QStandardItem):
     def __init__(self, name, rowid, idx):
@@ -268,9 +271,36 @@ class SidebarView(QTreeView):
             self.listClicked.emit(int(item.rowid))
         return
 
+    @Slot()
+    def storeExpanded(self):
+        self.expanded = {}
+        model = self.model()
+        for i in range(model.rowCount()):
+            rowIdx = model.index(i, 0)
+            item = model.item(i, 0)
+            self.expanded[item.rowid] = self.isExpanded(rowIdx)
+
+    @Slot()
+    def restoreExpanded(self):
+        model = self.model()
+        for i in range(model.rowCount()):
+            rowIdx = model.index(i, 0)
+            item = model.item(i, 0)
+            self.setExpanded(rowIdx, self.expanded[item.rowid])
+
+    @Slot()
+    def storeScrollValue(self):
+        value = self.verticalScrollBar().value()
+        self.scrollValue = value
+
+    @Slot()
+    def restoreScrollValue(self):
+        self.verticalScrollBar().setValue(self.scrollValue)
 
 class SidebarModel(QStandardItemModel):
     cardChanged = Signal()
+    willRefresh = Signal()
+    refreshed = Signal()
 
     def __init__(self, db):
         QStandardItemModel.__init__(self, parent=None)
@@ -279,12 +309,14 @@ class SidebarModel(QStandardItemModel):
         return
 
     def refresh(self):
+        self.willRefresh.emit()
         self.clear()
         rootNode = self.invisibleRootItem()
         for board in getBoards(self.db):
             rootNode.appendRow(board)
             for _list in getLists(self.db, board.rowid):
                 board.appendRow(_list)
+        self.refreshed.emit()
         return
 
     def dropMimeData(self, data, action, row, column, parent):

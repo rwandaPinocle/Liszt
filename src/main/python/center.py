@@ -107,6 +107,7 @@ class CardView(QListView):
         self.setWordWrap(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.doubleClicked.connect(self.onDoubleClick)
+        self.scrollValue = 0
         return
 
     @Slot(QModelIndex)
@@ -125,25 +126,60 @@ class CardView(QListView):
         return
 
 
+    @Slot()
+    def storeSelectedIndex(self):
+        value = self.selectedIndexes()[0].row()
+        self.selectedIndex = value
+
+    @Slot()
+    def restoreSelectedIndex(self):
+        model = self.model()
+        maxIdx = model.rowCount() - 1
+        if maxIdx == -1:
+            return
+        newIdx = min(self.selectedIndex, maxIdx)
+        rowIdx = model.index(newIdx, 0)
+        self.setCurrentIndex(rowIdx)
+
+    @Slot()
+    def storeScrollValue(self):
+        value = self.verticalScrollBar().value()
+        self.scrollValue = value
+
+    @Slot()
+    def restoreScrollValue(self):
+        self.verticalScrollBar().setValue(self.scrollValue)
+
+
 class CardModel(QStandardItemModel):
+    willUpdateCurrentList = Signal()
+    updatedCurrentList = Signal()
+
     def __init__(self, db):
         QStandardItemModel.__init__(self, parent=None)
         self.db = db
         self.listId = -1
+        self.changedList = False
         return
 
     @Slot()
     def refresh(self):
+        if not self.changedList:
+            self.willUpdateCurrentList.emit()
         self.clear()
         try:
             for card in reversed(getCards(self.db, self.listId)):
                 self.appendRow(card)
         except TypeError:
             pass
+        if not self.changedList:
+            self.updatedCurrentList.emit()
+        self.changedList = False
         return
     
     @Slot(int)
     def showListCards(self, listId):
+        self.changedList = True
         self.listId = listId
         self.refresh()
         return
